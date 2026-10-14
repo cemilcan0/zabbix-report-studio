@@ -1,0 +1,33 @@
+# ── Secrets & local config ─────────────────────────────
+.env
+secret.key
+
+# ── Databases (contain real accounts / infrastructure data) ──
+*.db
+
+# ── Logs ───────────────────────────────────────────────
+*.log
+
+# ── Python ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ── Build & packaging artifacts ────────────────────────
+build/
+dist/
+installer/
+*.spec.bak
+
+# ── Editor / OS ────────────────────────────────────────
+.vscode/
+.idea/
+.claude/settings.local.json
+Thumbs.db
+.DS_Store
+
+# ── Static demo build (python demo/build.py) ───────────
+_site/

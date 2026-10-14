@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="/static/i18n.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zabbix Report Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#100e0a; --sidebar:#14110b; --surface:#1b1810; --surface-2:#1a1810;
+      --border:rgba(240,230,200,.13); --border-2:rgba(240,230,200,.2);
+      --text:#f3efe6; --text-dim:#a59f91; --text-soft:#c7c0b0; --text-mute:#726c5e;
+      --accent:#f59e0b; --accent-2:#d97d06; --accent-bright:#fbbf24; --danger:#fb7a3c; --ok:#34d399;
+      --sev-disaster:#ff4d4d; --sev-high:#ff7a45; --sev-average:#ffb02e; --sev-warning:#facc15;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;
+      background:radial-gradient(120% 80% at 100% 0%,rgba(245,158,11,.06),transparent 55%),var(--bg);
+      color:var(--text);-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    ::-webkit-scrollbar{width:10px}
+    ::-webkit-scrollbar-thumb{background:rgba(240,230,200,.16);border-radius:6px;border:2px solid var(--bg)}
+
+    .layout{display:flex;min-height:100vh}
+
+    /* sidebar */
+    .sidebar{width:248px;flex-shrink:0;background:var(--sidebar);border-right:1px solid var(--border);
+      display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+    .brand{display:flex;align-items:center;gap:11px;padding:22px 22px 20px}
+    .brand .mk{width:38px;height:38px;border-radius:11px;background:linear-gradient(150deg,#2a2410,#1f1b0c);
+      border:1px solid rgba(245,158,11,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .brand .nm{font-size:14px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+    .brand .sub{font-size:10.5px;color:var(--text-mute);letter-spacing:.05em;text-transform:uppercase;margin-top:2px}
+    .nav{padding:6px 14px;flex:1;overflow-y:auto}
+    .nav .grp{font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px}
+    .nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:2px;border-radius:9px;
+      color:var(--text-soft);font-size:13.5px;font-weight:500;transition:background .12s}
+    .nav a:hover{background:rgba(240,230,200,.05)}
+    .nav a.active{background:rgba(245,158,11,.14);color:var(--accent-bright);box-shadow:inset 2px 0 0 var(--accent)}
+    .userbar{padding:14px;border-top:1px solid var(--border)}
+    .usercard{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--border)}
+    .avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(150deg,#f59e0b,#c47d08);
+      display:flex;align-items:center;justify-content:center;color:#2a1e05;font-weight:700;font-size:13px;flex-shrink:0}
+    .uname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .urole{font-size:10.5px;color:var(--text-mute)}
+    .logout{background:transparent;border:none;color:var(--text-mute);cursor:pointer;padding:6px;border-radius:7px;display:flex;transition:.12s}
+    .logout:hover{color:var(--danger);background:rgba(251,122,60,.12)}
+
+    /* main */
+    .main{flex:1;min-width:0;overflow-y:auto;max-height:100vh}
+    .content{padding:30px 40px 48px;animation:up .4s ease}
+    .tophead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+    .conn{display:inline-flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 15px;background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.38);border-radius:30px}
+    .conn.off{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35)}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);animation:pulse 2s ease-in-out infinite;flex-shrink:0}
+    .conn .lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-bright)}
+    .conn .srv{font-size:14.5px;font-weight:700;color:#f3efe6;letter-spacing:-.01em}
+    .conn .url{font-size:11.5px;color:var(--text-dim)}
+    .conn .sep{width:1px;height:16px;background:rgba(245,158,11,.3)}
+    .tophead h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+    .tophead .lead{color:var(--text-dim);font-size:14px;margin-top:4px}
+    .cta{display:flex;align-items:center;gap:8px;padding:11px 18px;background:linear-gradient(180deg,#f59e0b,#c47d08);
+      color:#2a1e05;border:none;border-radius:11px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;
+      box-shadow:0 8px 22px rgba(245,158,11,.22);transition:filter .15s}
+    .cta:hover{filter:brightness(1.08)}
+
+    /* KPI strip */
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+    .kpi{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:18px 20px;box-shadow:0 6px 22px rgba(0,0,0,.35)}
+    .kpi .kh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .kpi .kh span{font-size:12px;color:var(--text-dim);font-weight:500}
+    .kpi .kh .livebadge{font-size:9.5px;font-style:normal;font-weight:600;color:#ff6b6b;background:rgba(255,77,77,.12);border:1px solid rgba(255,77,77,.25);border-radius:20px;padding:2px 7px;margin-left:7px;letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
+    .kpi .ki{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+    .kpi .kv{font-family:'IBM Plex Mono',monospace;font-size:29px;font-weight:600;letter-spacing:-.02em;line-height:1}
+    .kpi .ks{font-size:11.5px;margin-top:8px;font-weight:500;color:var(--text-dim)}
+
+    /* charts row */
+    .charts{display:grid;grid-template-columns:1fr 1.2fr;gap:16px;margin-bottom:28px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:0 6px 22px rgba(0,0,0,.35)}
+    .card .ct{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-dim);margin-bottom:18px}
+    .legend{display:flex;flex-direction:column;gap:12px}
+    .lrow{display:flex;align-items:center;gap:11px}
+    .lrow .sw{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+    .lrow .ln{font-size:13px;color:var(--text-soft);flex:1;font-weight:500}
+    .lrow .lc{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600}
+    .lrow .lp{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-mute);width:46px;text-align:right}
+    .hostrow{display:flex;align-items:center;gap:13px;margin-bottom:13px}
+    .hostrow .hn{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-soft);width:150px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hbar{flex:1;height:8px;border-radius:5px;background:#1a1610;overflow:hidden}
+    .hbar>div{height:100%;border-radius:5px;background:linear-gradient(90deg,#c47d08,#f59e0b)}
+    .hostrow .hc{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;width:30px;text-align:right}
+
+    .seclabel{font-size:11px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+    .app{display:block;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;transition:.15s;box-shadow:0 6px 22px rgba(0,0,0,.35)}
+    .app:hover{border-color:var(--border-2);transform:translateY(-2px)}
+    .app.primary{background:linear-gradient(160deg,#2a2410,#221f12);border-color:rgba(245,158,11,.35)}
+    .app.primary:hover{border-color:rgba(245,158,11,.6)}
+    .app .ico{width:42px;height:42px;border-radius:11px;background:rgba(240,230,200,.07);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+    .app.primary .ico{background:rgba(245,158,11,.16)}
+    .app .t{font-size:15.5px;font-weight:700;margin-bottom:6px}
+    .app .d{font-size:12.5px;color:var(--text-dim);line-height:1.55;margin-bottom:14px}
+    .tag{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.04em;color:var(--text-soft);
+      background:rgba(240,230,200,.07);border:1px solid var(--border);padding:4px 10px;border-radius:20px}
+    .app.primary .tag{color:var(--accent-bright);background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.28)}
+
+    .statmeta{font-size:11.5px;color:var(--text-mute);margin-left:8px;font-family:'IBM Plex Mono',monospace}
+    .statbtn{background:transparent;border:none;color:var(--text-mute);cursor:pointer;padding:3px;border-radius:6px;
+      vertical-align:middle;display:inline-flex;margin-left:4px;transition:color .12s}
+    .statbtn:hover{color:var(--accent-bright)}
+    .statbtn.spin svg{animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    @media(max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}}
+    @media(max-width:720px){.sidebar{display:none}.content{padding:24px 18px 40px}}
+  </style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mk"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2.5-7 5 14 2.5-7H21"/></svg></div>
+      <div><div class="nm">Zabbix Report</div><div class="sub">Studio</div></div>
+    </div>
+    <nav class="nav">
+      <div class="grp">General</div>
+      <a href="/" class="active"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Overview</a>
+      <a href="/servers"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Zabbix Servers</a>
+      <div class="grp">Reports</div>
+      <a href="/alarm/report"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Alarm Report</a>
+      <a href="/ack"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>ACK Report</a>
+      {% if current_user.can_write() %}
+      <a href="/schedules"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Scheduled Reports</a>
+      {% endif %}
+      <div class="grp">On-call</div>
+      <a href="/nobet"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>On-call Roster</a>
+      <div class="grp">Inventory</div>
+      <a href="/tkodu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Trigger Search</a>
+      <a href="/envanter"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Inventory</a>
+      <a href="/alarm/cache"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Cache</a>
+      {% if current_user.is_admin() %}
+      <div class="grp">Management</div>
+      <a href="/users"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Users</a>
+      {% endif %}
+    </nav>
+    <div class="userbar">
+      <div class="usercard">
+        <div class="avatar">{{ current_user.username[0] | upper }}</div>
+        <div style="flex:1;min-width:0">
+          <div class="uname">{{ current_user.username }}</div>
+          <div class="urole">{{ current_user.role | capitalize }}</div>
+        </div>
+        <a href="/change-password" class="logout" title="Change password"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2"/><path d="M17 6l3 3"/><path d="M14 9l2 2"/></svg></a>
+        <a href="/logout" class="logout" title="Sign out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="content">
+      <div class="tophead">
+        <div>
+          {% if active_server %}
+          <div class="conn"><span class="dot"></span><span class="lbl">Active Zabbix</span><span class="srv">{{ active_server.name }}</span><span class="sep"></span><span class="url">{{ active_server.base_url }}</span></div>
+          {% else %}
+          <div class="conn off"><span class="dot" style="background:var(--danger);box-shadow:0 0 8px var(--danger)"></span><span class="lbl" style="color:#f87171">No Active Zabbix</span><span class="url">— <a href="/servers" style="color:var(--accent-bright);font-weight:600">select a server</a></span></div>
+          {% endif %}
+          <h1><span>Welcome,</span> {{ current_user.username }}</h1>
+          <p class="lead">Monitoring summary — <b style="color:var(--text)">active problems are live</b>, statistics cover the last 30 days
+            <span id="statMeta" class="statmeta"></span>
+            <button id="statRefresh" class="statbtn" title="Refresh" type="button">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </p>
+        </div>
+        <a href="/alarm/report" class="cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          New Report
+        </a>
+      </div>
+
+      <!-- KPI strip -->
+      <div class="kpis">
+        <div class="kpi">
+          <div class="kh"><span>Active Problems <em class="livebadge">● open now</em></span><span class="ki" style="background:rgba(255,77,77,.13)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span></div>
+          <div class="kv" id="kpiActive">—</div>
+          <div class="ks" id="kpiActiveSub" style="color:#fb7a3c">loading…</div>
+        </div>
+        <div class="kpi">
+          <div class="kh"><span>Total Alarms (30d)</span><span class="ki" style="background:rgba(245,158,11,.13)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span></div>
+          <div class="kv" id="kpiTotal">—</div>
+          <div class="ks" id="kpiTotalSub">last 30 days total</div>
+        </div>
+        <div class="kpi">
+          <div class="kh"><span>Avg. Resolution Time</span><span class="ki" style="background:rgba(56,189,248,.13)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span></div>
+          <div class="kv"><span id="kpiResolve">—</span><span style="font-size:16px;color:var(--text-dim)">min</span></div>
+          <div class="ks" id="kpiResolveSub">median —</div>
+        </div>
+        <div class="kpi">
+          <div class="kh"><span>Monitored Hosts</span><span class="ki" style="background:rgba(52,211,153,.13)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span></div>
+          <div class="kv" id="kpiHosts">—</div>
+          <div class="ks" id="kpiHostsSub">actively monitored hosts</div>
+        </div>
+      </div>
+
+      <!-- charts -->
+      <div class="charts">
+        <div class="card">
+          <div class="ct"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Severity Distribution</div>
+          <div style="display:flex;align-items:center;gap:24px">
+            <div style="position:relative;width:150px;height:150px;flex-shrink:0">
+              <svg id="sevDonut" width="150" height="150" viewBox="0 0 160 160" style="transform:rotate(-90deg)">
+                <circle cx="80" cy="80" r="54" fill="none" stroke="#1a1610" stroke-width="20"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div id="sevTotal" style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;line-height:1">—</div>
+                <div style="font-size:11px;color:var(--text-mute);margin-top:2px">total</div>
+              </div>
+            </div>
+            <div class="legend" id="sevLegend" style="flex:1">
+              <div class="lrow"><span class="ln" style="color:var(--text-mute)">loading…</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ct"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Top Alarming Devices — TOP 6</div>
+          <div id="topHosts">
+            <div class="hostrow"><span class="hn" style="color:var(--text-mute)">loading…</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="seclabel">Apps</div>
+      <div class="grid">
+
+        <a href="/alarm/report" class="app primary">
+          <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <div class="t">Alarm Report</div>
+          <p class="d">Alarm history, SLA and business/after-hours analysis — Excel & PDF export.</p>
+          <span class="tag">ZABBIX · REPORT</span>
+        </a>
+
+        <a href="/envanter" class="app">
+          <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#c7c0b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div>
+          <div class="t">Inventory</div>
+          <p class="d">Infrastructure inventory — serial numbers of SAN switches, servers, storage and tape.</p>
+          <span class="tag">ZABBIX API</span>
+        </a>
+
+        <a href="/tkodu" class="app">
+          <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#c7c0b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
+          <div class="t">Trigger Search</div>
+          <p class="d">Every trigger whose name contains the text you type — with status and host details.</p>
+          <span class="tag">ZABBIX TRIGGER</span>
+        </a>
+
+        <a href="/alarm/cache" class="app">
+          <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#c7c0b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+          <div class="t">Cache Viewer</div>
+          <p class="d">Browse cached alarm data by date range and host name.</p>
+          <span class="tag">SQLITE · CACHE</span>
+        </a>
+
+        <a href="/ack" class="app">
+          <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#c7c0b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div class="t">ACK Report</div>
+          <p class="d">Alarm acknowledgements — who, when, and how many minutes later. Unacknowledged alarms.</p>
+          <span class="tag">ZABBIX ACK</span>
+        </a>
+
+        {% if current_user.is_admin() %}
+        <a href="/users" class="app">
+          <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#c7c0b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+          <div class="t">Users</div>
+          <p class="d">Manage portal users, their roles and access rights.</p>
+          <span class="tag">MANAGEMENT</span>
+        </a>
+        {% endif %}
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  const HAS_SERVER = {{ 'true' if active_server else 'false' }};
+  const SERVER_ID  = {{ active_server.id if active_server else 'null' }};
+  const STORE_KEY  = 'dashStats:' + SERVER_ID;   // last fetched data is cached in the browser
+  const POLL_MS = 300000;       // refresh every 5 min (not live, but keeps data fresh)
+  const C = 2 * Math.PI * 54;   // donut cevre uzunlugu (r=54)
+
+  const SEV = {
+    '5': {name:'Disaster',       color:'#ff4d4d'},
+    '4': {name:'High',           color:'#ff7a45'},
+    '3': {name:'Average',        color:'#ffb02e'},
+    '2': {name:'Warning',        color:'#facc15'},
+    '1': {name:'Information',    color:'#38bdf8'},
+    '0': {name:'Not classified', color:'#8a8a8a'}
+  };
+  const SEV_ORDER = ['5','4','3','2','1','0'];
+
+  const $ = id => document.getElementById(id);
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  function fmtNum(n){ return (n||0).toLocaleString(I18N.locale); }
+  function fmtPct(x){ return I18N.lang === 'tr' ? '%' + x.toFixed(1).replace('.', ',') : x.toFixed(1) + '%'; }
+
+  function fmtDur(sec){
+    sec = Math.max(0, Math.round(sec||0));
+    if (sec < 60) return t('{0} sec', sec);
+    const m = Math.round(sec/60);
+    if (m < 60) return t('{0} min', m);
+    const h = Math.floor(m/60), rm = m % 60;
+    return rm ? t('{0} h {1} min', h, rm) : t('{0} h', h);
+  }
+
+  function renderSeverity(dist, total){
+    // donut
+    const svg = $('sevDonut');
+    // remove old slices outside the background ring
+    while (svg.childNodes.length > 1) svg.removeChild(svg.lastChild);
+    let offset = 0;
+    SEV_ORDER.forEach(k => {
+      const cnt = dist[k] || 0;
+      if (!cnt || !total) return;
+      const frac = cnt / total;
+      const seg = frac * C;
+      const c = document.createElementNS(SVGNS, 'circle');
+      c.setAttribute('cx','80'); c.setAttribute('cy','80'); c.setAttribute('r','54');
+      c.setAttribute('fill','none'); c.setAttribute('stroke', SEV[k].color);
+      c.setAttribute('stroke-width','20');
+      c.setAttribute('stroke-dasharray', seg.toFixed(2) + ' ' + (C-seg).toFixed(2));
+      c.setAttribute('stroke-dashoffset', (-offset).toFixed(2));
+      svg.appendChild(c);
+      offset += seg;
+    });
+    $('sevTotal').textContent = fmtNum(total);
+
+    // legend
+    const leg = $('sevLegend');
+    const rows = SEV_ORDER.filter(k => (dist[k]||0) > 0);
+    if (!rows.length){
+      leg.innerHTML = '<div class="lrow"><span class="ln" style="color:var(--text-mute)">no data</span></div>';
+      return;
+    }
+    leg.innerHTML = rows.map(k => {
+      const cnt = dist[k] || 0;
+      const pct = total ? (cnt/total*100) : 0;
+      return '<div class="lrow"><span class="sw" style="background:'+SEV[k].color+'"></span>'
+        + '<span class="ln">'+SEV[k].name+'</span>'
+        + '<span class="lc">'+fmtNum(cnt)+'</span>'
+        + '<span class="lp">'+fmtPct(pct)+'</span></div>';
+    }).join('');
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderTopHosts(hosts){
+    const box = $('topHosts');
+    if (!hosts || !hosts.length){
+      box.innerHTML = '<div class="hostrow"><span class="hn" style="color:var(--text-mute)">no alarming devices</span></div>';
+      return;
+    }
+    const max = hosts[0].count || 1;
+    box.innerHTML = hosts.map((h,i) => {
+      const w = Math.max(6, Math.round((h.count/max)*100));
+      const mb = (i === hosts.length-1) ? ' style="margin-bottom:0"' : '';
+      return '<div class="hostrow"'+mb+'><span class="hn" title="'+esc(h.name)+'">'+esc(h.name)+'</span>'
+        + '<div class="hbar"><div style="width:'+w+'%"></div></div>'
+        + '<span class="hc">'+fmtNum(h.count)+'</span></div>';
+    }).join('');
+  }
+
+  function sevSummary(bySev){
+    const parts = [];
+    if ((bySev['5']||0) > 0) parts.push(bySev['5']+' disaster');
+    if ((bySev['4']||0) > 0) parts.push(bySev['4']+' high');
+    if ((bySev['3']||0) > 0) parts.push(bySev['3']+' average');
+    return parts.length ? t('severity: {0}', parts.join(' · ')) : 'no severity breakdown';
+  }
+
+  function render(d){
+    $('kpiActive').textContent = fmtNum(d.activeProblems);
+    $('kpiActiveSub').textContent = sevSummary(d.activeBySeverity || {});
+    $('kpiTotal').textContent  = fmtNum(d.total30);
+    $('kpiResolve').textContent = String(Math.max(0, Math.round((d.avgResolveSec||0)/60)));
+    $('kpiResolveSub').textContent = (d.resolvedSampleCount ? t('median {0}', fmtDur(d.medianResolveSec)) : 'no resolved alarms');
+    $('kpiHosts').textContent  = fmtNum(d.monitoredHosts);
+    renderSeverity(d.severityDist || {}, d.total30 || 0);
+    renderTopHosts(d.topHosts || []);
+  }
+
+  function showEmpty(msg){
+    ['kpiActive','kpiTotal','kpiResolve','kpiHosts'].forEach(id => $(id).textContent = '—');
+    $('kpiActiveSub').textContent = msg;
+    $('kpiResolveSub').textContent = '';
+    $('sevTotal').textContent = '—';
+    $('sevLegend').innerHTML = '<div class="lrow"><span class="ln" style="color:var(--text-mute)">'+esc(msg)+'</span></div>';
+    $('topHosts').innerHTML = '<div class="hostrow"><span class="hn" style="color:var(--text-mute)">'+esc(msg)+'</span></div>';
+    const svg = $('sevDonut'); while (svg.childNodes.length > 1) svg.removeChild(svg.lastChild);
+  }
+
+  function setMeta(txt){ $('statMeta').textContent = txt; }
+
+  function saveStore(data){
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ts: Date.now(), data: data})); } catch(e){}
+  }
+  function loadStore(){
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch(e){ return null; }
+  }
+
+  let busy = false;
+  async function load(force){
+    if (busy) return;
+    if (!HAS_SERVER){ showEmpty('no server selected'); setMeta(''); return; }
+    busy = true;
+    const btn = $('statRefresh'); if (btn) btn.classList.add('spin');
+    try {
+      const res = await fetch('/api/dashboard/stats' + (force ? '?force=1' : ''), {headers:{'Accept':'application/json'}});
+      const j = await res.json();
+      if (!j.success){
+        if (j.needServer) showEmpty('no server selected');
+        else setMeta(t('error: {0}', I18N.msg(j.error || 'unknown')));
+        return;
+      }
+      render(j.data);
+      saveStore(j.data);
+      const at = new Date().toLocaleTimeString(I18N.locale, {hour:'2-digit', minute:'2-digit'});
+      let m = t('last update {0}', at);
+      if (j.fromCache) m += t(' · cached');
+      if (j.stale) m += t(' · (stale — Zabbix unreachable)');
+      setMeta(m);
+    } catch(e){
+      setMeta('connection error');
+    } finally {
+      busy = false;
+      if (btn) btn.classList.remove('spin');
+    }
+  }
+
+  const rb = $('statRefresh');
+  if (rb) rb.addEventListener('click', () => load(true));
+
+  // Don't leave it empty on load: show the last fetched data immediately,
+  // then fetch fresh data in the background and update.
+  if (HAS_SERVER){
+    const cached = loadStore();
+    if (cached && cached.data){
+      render(cached.data);
+      const at = new Date(cached.ts).toLocaleTimeString(I18N.locale, {hour:'2-digit', minute:'2-digit'});
+      setMeta(t('previous data ({0}) · refreshing…', at));
+    }
+  }
+
+  // initial load + periodic refresh
+  load(false);
+  setInterval(() => { if (!document.hidden) load(false); }, POLL_MS);
+  // refresh when returning to the tab
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(false); });
+})();
+</script>
+</body>
+</html>

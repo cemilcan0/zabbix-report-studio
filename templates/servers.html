@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="/static/i18n.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zabbix Servers · Zabbix Report Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#100e0a; --sidebar:#14110b; --surface:#1b1810; --surface-2:#1a1810;
+      --border:rgba(240,230,200,.13); --border-2:rgba(240,230,200,.2);
+      --text:#f3efe6; --text-dim:#a59f91; --text-soft:#c7c0b0; --text-mute:#726c5e;
+      --accent:#f59e0b; --accent-2:#d97d06; --accent-bright:#fbbf24; --danger:#fb7a3c; --ok:#34d399;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;
+      background:radial-gradient(120% 80% at 100% 0%,rgba(245,158,11,.06),transparent 55%),var(--bg);
+      color:var(--text);-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    ::-webkit-scrollbar{width:10px}
+    ::-webkit-scrollbar-thumb{background:rgba(240,230,200,.16);border-radius:6px;border:2px solid var(--bg)}
+
+    .layout{display:flex;min-height:100vh}
+    .sidebar{width:248px;flex-shrink:0;background:var(--sidebar);border-right:1px solid var(--border);
+      display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+    .brand{display:flex;align-items:center;gap:11px;padding:22px 22px 20px}
+    .brand .mk{width:38px;height:38px;border-radius:11px;background:linear-gradient(150deg,#2a2410,#1f1b0c);
+      border:1px solid rgba(245,158,11,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .brand .nm{font-size:14px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+    .brand .sub{font-size:10.5px;color:var(--text-mute);letter-spacing:.05em;text-transform:uppercase;margin-top:2px}
+    .nav{padding:6px 14px;flex:1;overflow-y:auto}
+    .nav .grp{font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px}
+    .nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:2px;border-radius:9px;
+      color:var(--text-soft);font-size:13.5px;font-weight:500;transition:background .12s}
+    .nav a:hover{background:rgba(240,230,200,.05)}
+    .nav a.active{background:rgba(245,158,11,.14);color:var(--accent-bright);box-shadow:inset 2px 0 0 var(--accent)}
+    .userbar{padding:14px;border-top:1px solid var(--border)}
+    .usercard{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--border)}
+    .avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(150deg,#f59e0b,#c47d08);
+      display:flex;align-items:center;justify-content:center;color:#2a1e05;font-weight:700;font-size:13px;flex-shrink:0}
+    .uname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .urole{font-size:10.5px;color:var(--text-mute)}
+    .logout{background:transparent;border:none;color:var(--text-mute);cursor:pointer;padding:6px;border-radius:7px;display:flex;transition:.12s}
+    .logout:hover{color:var(--danger);background:rgba(251,122,60,.12)}
+
+    .main{flex:1;min-width:0;overflow-y:auto;max-height:100vh}
+    .content{padding:30px 40px 48px;animation:up .4s ease}
+    .tophead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+    .tophead h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+    .tophead .lead{color:var(--text-dim);font-size:14px;margin-top:4px}
+    .cta{display:flex;align-items:center;gap:8px;padding:11px 18px;background:linear-gradient(180deg,#f59e0b,#c47d08);
+      color:#2a1e05;border:none;border-radius:11px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;
+      box-shadow:0 8px 22px rgba(245,158,11,.22);transition:filter .15s}
+    .cta:hover{filter:brightness(1.08)}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+    .scard{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;
+      box-shadow:0 6px 22px rgba(0,0,0,.35);transition:.15s;position:relative}
+    .scard.active{background:linear-gradient(160deg,#2a2410,#221f12);border-color:rgba(245,158,11,.4)}
+    .scard .shead{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+    .stat{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--text-mute);position:relative}
+    .stat.ok{background:var(--ok);box-shadow:0 0 10px rgba(52,211,153,.7)}
+    .stat.bad{background:#ff5555;box-shadow:0 0 10px rgba(255,85,85,.6)}
+    .stat.checking{background:transparent;border:2px solid rgba(240,230,200,.25);border-top-color:var(--accent);animation:spin .8s linear infinite}
+    .sname{font-size:16px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .badge{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--accent-bright);background:rgba(245,158,11,.16);
+      border:1px solid rgba(245,158,11,.3);padding:3px 9px;border-radius:20px;text-transform:uppercase}
+    .smeta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);line-height:1.7;
+      word-break:break-all;margin-bottom:6px}
+    .smeta b{color:var(--text-soft);font-weight:600}
+    .sstatus{font-size:11.5px;margin:10px 0 14px;min-height:16px}
+    .sstatus.ok{color:var(--ok)} .sstatus.bad{color:var(--danger)} .sstatus.checking{color:var(--text-mute)}
+    .sactions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:9px;cursor:pointer;
+      border:1px solid var(--border-2);background:rgba(240,230,200,.05);color:var(--text-soft);transition:.12s}
+    .btn:hover{background:rgba(240,230,200,.1)}
+    .btn.primary{background:linear-gradient(180deg,#f59e0b,#c47d08);color:#2a1e05;border:none}
+    .btn.primary:hover{filter:brightness(1.08)}
+    .btn.ghost{border-color:transparent;background:transparent;color:var(--text-mute)}
+    .btn.ghost:hover{color:var(--danger);background:rgba(251,122,60,.1)}
+    .btn.activebadge{background:rgba(52,211,153,.14);color:var(--ok);border-color:rgba(52,211,153,.3);cursor:default}
+
+    .addcard{border:1.5px dashed var(--border-2);background:transparent;border-radius:16px;min-height:180px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;
+      color:var(--text-mute);transition:.15s}
+    .addcard:hover{border-color:var(--accent);color:var(--accent-bright);background:rgba(245,158,11,.04)}
+    .addcard .plus{width:52px;height:52px;border-radius:14px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center}
+    .addcard span{font-size:13.5px;font-weight:600}
+
+    .empty{text-align:center;padding:60px 20px;color:var(--text-dim)}
+    .empty h2{font-size:19px;color:var(--text);margin-bottom:8px}
+
+    /* modal */
+    .modal{position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(3px);display:none;
+      align-items:center;justify-content:center;z-index:50;padding:20px}
+    .modal.show{display:flex}
+    .dialog{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;
+      padding:26px;box-shadow:0 24px 70px rgba(0,0,0,.6);animation:up .25s ease}
+    .dialog h3{font-size:18px;font-weight:700;margin-bottom:18px}
+    .field{margin-bottom:15px}
+    .field label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:7px}
+    .field input{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border-2);
+      background:#151209;color:var(--text);font-family:inherit;font-size:13.5px;outline:none;transition:.12s}
+    .field input:focus{border-color:var(--accent)}
+    .field .hint{font-size:11px;color:var(--text-mute);margin-top:5px}
+    .field label.check{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--text-soft);margin:0;cursor:pointer}
+    .field label.check input{width:16px;height:16px;padding:0;accent-color:var(--accent);flex-shrink:0}
+    .tlsoff{color:var(--danger)}
+    .dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface-2);
+      border:1px solid var(--border-2);color:var(--text);padding:12px 20px;border-radius:11px;font-size:13px;
+      box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
+    .toast.show{opacity:1}
+    .toast.err{border-color:rgba(251,122,60,.5);color:var(--danger)}
+    @media(max-width:720px){.sidebar{display:none}.content{padding:24px 18px 40px}}
+  </style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mk"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2.5-7 5 14 2.5-7H21"/></svg></div>
+      <div><div class="nm">Zabbix Report</div><div class="sub">Studio</div></div>
+    </div>
+    <nav class="nav">
+      <div class="grp">General</div>
+      <a href="/"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Overview</a>
+      <a href="/servers" class="active"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Zabbix Servers</a>
+      <div class="grp">Reports</div>
+      <a href="/alarm/report"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Alarm Report</a>
+      <a href="/ack"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>ACK Report</a>
+      {% if current_user.can_write() %}
+      <a href="/schedules"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Scheduled Reports</a>
+      {% endif %}
+      <div class="grp">On-call</div>
+      <a href="/nobet"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>On-call Roster</a>
+      <div class="grp">Inventory</div>
+      <a href="/tkodu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Trigger Search</a>
+      <a href="/envanter"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>Inventory</a>
+      <a href="/alarm/cache"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Cache</a>
+      {% if current_user.is_admin() %}
+      <div class="grp">Management</div>
+      <a href="/users"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Users</a>
+      {% endif %}
+    </nav>
+    <div class="userbar">
+      <div class="usercard">
+        <div class="avatar">{{ current_user.username[0] | upper }}</div>
+        <div style="flex:1;min-width:0">
+          <div class="uname">{{ current_user.username }}</div>
+          <div class="urole">{{ current_user.role | capitalize }}</div>
+        </div>
+        <a href="/change-password" class="logout" title="Change password"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2"/><path d="M17 6l3 3"/><path d="M14 9l2 2"/></svg></a>
+        <a href="/logout" class="logout" title="Sign out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <div class="tophead">
+        <div>
+          <h1>Zabbix Servers</h1>
+          <p class="lead">Add multiple Zabbix environments, see which are reachable and switch between them.</p>
+        </div>
+        {% if current_user.can_write() %}
+        <button class="cta" onclick="openAdd()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Server
+        </button>
+        {% endif %}
+      </div>
+
+      <div id="grid" class="grid"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="dialog">
+    <h3 id="modalTitle">New Zabbix Server</h3>
+    <input type="hidden" id="fId">
+    <div class="field">
+      <label>Display Name</label>
+      <input id="fName" placeholder="e.g. Main DC Zabbix" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Zabbix URL</label>
+      <input id="fUrl" placeholder="http://10.0.0.5 or http://10.0.0.5/api_jsonrpc.php" autocomplete="off">
+      <div class="hint">/api_jsonrpc.php is appended automatically — just enter the address.</div>
+    </div>
+    <div class="field">
+      <label>Username</label>
+      <input id="fUser" placeholder="Zabbix username" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="fPass" type="password" placeholder="Zabbix password" autocomplete="new-password">
+      <div class="hint" id="passHint" style="display:none">Leave blank to keep the current password.</div>
+    </div>
+    <div class="field">
+      <label class="check"><input type="checkbox" id="fVerify" checked> Verify TLS certificate</label>
+      <div class="hint">Turn off only for a server with a self-signed certificate: without it the connection can be intercepted.</div>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="saveBtn" onclick="saveServer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let SERVERS = [], ACTIVE = null, CAN_MANAGE = true;
+
+function toast(msg, err){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(()=>{ t.className = 'toast' + (err ? ' err' : ''); }, 2600);
+}
+
+function esc(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function loadServers(){
+  const r = await fetch('/api/servers');
+  const j = await r.json();
+  SERVERS = j.servers || []; ACTIVE = j.activeId || null; CAN_MANAGE = j.canManage !== false;
+  render();
+  if (SERVERS.length) checkStatus();
+}
+
+function render(){
+  const g = document.getElementById('grid');
+  if (!SERVERS.length && !CAN_MANAGE){
+    g.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <h2>No Zabbix servers yet</h2>
+      <p>An administrator has not added a server yet.</p></div>`;
+    return;
+  }
+  if (!SERVERS.length){
+    g.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <h2>No Zabbix servers yet</h2>
+      <p style="margin-bottom:22px">Start by adding your first Zabbix server.</p>
+      <button class="cta" style="margin:0 auto" onclick="openAdd()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Server</button></div>`;
+    return;
+  }
+  let html = '';
+  for (const s of SERVERS){
+    const isActive = s.id === ACTIVE;
+    html += `<div class="scard ${isActive?'active':''}" data-id="${s.id}">
+      <div class="shead">
+        <span class="stat checking" id="stat-${s.id}"></span>
+        <span class="sname">${esc(s.name)}</span>
+        ${isActive ? '<span class="badge">Active</span>' : ''}
+      </div>
+      <div class="smeta"><b>URL:</b> ${esc(s.baseUrl)}</div>
+      <div class="smeta"><b>User:</b> ${esc(s.username)}</div>
+      ${s.verifyTls === false && /^https:/i.test(s.baseUrl) ? '<div class="smeta tlsoff">TLS certificate is not verified</div>' : ''}
+      <div class="sstatus checking" id="msg-${s.id}">Checking connection…</div>
+      <div class="sactions">
+        ${isActive
+          ? '<button class="btn activebadge">✓ In use</button>'
+          : `<button class="btn primary" onclick="activate(${s.id})">Activate</button>`}
+        ${CAN_MANAGE ? `<button class="btn" onclick="openEdit(${s.id})">Edit</button>
+        <button class="btn ghost" onclick="delServer(${s.id})">Delete</button>` : ''}
+      </div>
+    </div>`;
+  }
+  if (CAN_MANAGE) html += `<div class="addcard" onclick="openAdd()">
+      <div class="plus"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <span>Add Server</span></div>`;
+  g.innerHTML = html;
+}
+
+async function checkStatus(){
+  // put each card into a "checking" state
+  for (const s of SERVERS){
+    const st = document.getElementById('stat-'+s.id), msg = document.getElementById('msg-'+s.id);
+    if (st){ st.className = 'stat checking'; }
+    if (msg){ msg.className = 'sstatus checking'; msg.textContent = 'Checking connection…'; }
+  }
+  try{
+    const r = await fetch('/api/servers/check', {method:'POST'});
+    const j = await r.json();
+    const res = j.results || {};
+    for (const s of SERVERS){
+      const st = document.getElementById('stat-'+s.id), msg = document.getElementById('msg-'+s.id);
+      const info = res[String(s.id)];
+      if (!st || !msg) continue;
+      if (info && info.ok){
+        st.className = 'stat ok'; msg.className = 'sstatus ok'; msg.textContent = '● Reachable — connection and authentication succeeded';
+      } else {
+        st.className = 'stat bad'; msg.className = 'sstatus bad';
+        msg.textContent = I18N.t('● Unreachable') + (info && info.error ? ' — ' + I18N.msg(info.error) : '');
+      }
+    }
+  } catch(e){
+    for (const s of SERVERS){
+      const st = document.getElementById('stat-'+s.id), msg = document.getElementById('msg-'+s.id);
+      if (st) st.className = 'stat bad';
+      if (msg){ msg.className = 'sstatus bad'; msg.textContent = '● Check failed'; }
+    }
+  }
+}
+
+// ── Modal ──
+function openAdd(){
+  document.getElementById('modalTitle').textContent = 'New Zabbix Server';
+  document.getElementById('fId').value = '';
+  document.getElementById('fName').value = '';
+  document.getElementById('fUrl').value = '';
+  document.getElementById('fUser').value = '';
+  document.getElementById('fPass').value = '';
+  document.getElementById('fPass').placeholder = 'Zabbix password';
+  document.getElementById('fVerify').checked = true;
+  document.getElementById('passHint').style.display = 'none';
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('fName').focus();
+}
+function openEdit(id){
+  const s = SERVERS.find(x => x.id === id); if (!s) return;
+  document.getElementById('modalTitle').textContent = 'Edit Server';
+  document.getElementById('fId').value = s.id;
+  document.getElementById('fName').value = s.name;
+  document.getElementById('fUrl').value = s.baseUrl;
+  document.getElementById('fUser').value = s.username;
+  document.getElementById('fPass').value = '';
+  document.getElementById('fPass').placeholder = '(enter a new password to change it)';
+  document.getElementById('fVerify').checked = s.verifyTls !== false;
+  document.getElementById('passHint').style.display = 'block';
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('fName').focus();
+}
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+async function saveServer(){
+  const id = document.getElementById('fId').value;
+  const payload = {
+    name: document.getElementById('fName').value.trim(),
+    url: document.getElementById('fUrl').value.trim(),
+    username: document.getElementById('fUser').value.trim(),
+    password: document.getElementById('fPass').value,
+    verifyTls: document.getElementById('fVerify').checked
+  };
+  if (!payload.name || !payload.url || !payload.username){
+    toast('Name, URL and username are required.', true); return;
+  }
+  const btn = document.getElementById('saveBtn'); btn.disabled = true;
+  const url = id ? `/api/servers/${id}` : '/api/servers';
+  try{
+    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const j = await r.json();
+    if (j.success){ closeModal(); toast(id ? 'Server updated' : 'Server added'); await loadServers(); }
+    else toast(j.error || 'Could not save', true);
+  } catch(e){ toast('Could not save the server', true); }
+  finally{ btn.disabled = false; }
+}
+
+async function activate(id){
+  try{
+    const r = await fetch(`/api/servers/${id}/activate`, {method:'POST'});
+    const j = await r.json();
+    if (j.success){ ACTIVE = id; render(); checkStatus(); toast('Active Zabbix changed'); }
+    else toast(j.error || 'Could not change', true);
+  } catch(e){ toast('Operation failed', true); }
+}
+
+async function delServer(id){
+  const s = SERVERS.find(x => x.id === id);
+  if (!confirm(I18N.t('Are you sure you want to delete the server "{0}"?', s ? s.name : ''))) return;
+  try{
+    const r = await fetch(`/api/servers/${id}/delete`, {method:'POST'});
+    const j = await r.json();
+    if (j.success){ toast('Server deleted'); await loadServers(); }
+    else toast(j.error || 'Could not delete', true);
+  } catch(e){ toast('Delete failed', true); }
+}
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+loadServers();
+</script>
+</body>
+</html>

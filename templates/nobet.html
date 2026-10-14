@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/static/i18n.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>On-call Roster - Zabbix Report Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg-primary:#100e0a;--bg-secondary:#16140e;--bg-tertiary:#211d14;--bg-card:rgba(28,25,17,0.9);--text-primary:#fff;--text-secondary:#a59f91;--text-muted:#726c5e;--accent-primary:#f59e0b;--accent-secondary:#d97d06;--accent-gradient:linear-gradient(135deg,#f59e0b 0%,#d97d06 100%);--success:#10b981;--danger:#ef4444;--border-color:rgba(255,255,255,0.08);--border-radius:12px;--transition:0.15s ease}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',-apple-system,sans-serif;background:radial-gradient(ellipse at top,rgba(245,158,11,0.08) 0%,transparent 50%),var(--bg-primary);color:var(--text-primary);min-height:100vh;padding-left:248px}
+@media(max-width:860px){body{padding-left:0}#zrsSidebar{display:none !important}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg-secondary)}::-webkit-scrollbar-thumb{background:var(--bg-tertiary);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--accent-primary)}
+.wrap{max-width:920px;margin:0 auto;padding:2rem}
+.page-head{display:flex;align-items:center;gap:.9rem;margin-bottom:.4rem}
+.page-head .ic{width:44px;height:44px;border-radius:12px;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center}
+.page-head h1{font-size:1.5rem;font-weight:700}
+.sub{color:var(--text-secondary);font-size:.9rem;margin-bottom:1.6rem;line-height:1.5}
+.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:1.4rem 1.5rem;margin-bottom:1.4rem}
+.card h2{font-size:1rem;font-weight:600;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem}
+.card .hint{color:var(--text-muted);font-size:.8rem;margin-bottom:1.1rem;line-height:1.5}
+.grid{display:flex;gap:1.2rem;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:.4rem}
+.fld label{font-size:.78rem;color:var(--text-secondary);font-weight:500}
+input[type=date],input[type=time],input[type=text]{background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:.9rem;padding:.55rem .7rem;transition:var(--transition)}
+select{background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:.9rem;padding:.55rem .7rem}
+select option{background:#211d14;color:#fff}
+select:disabled{opacity:.55;cursor:not-allowed}
+.days{display:flex;gap:.3rem .9rem;flex-wrap:wrap;align-items:center;min-height:38px}
+.days label{display:inline-flex;align-items:center;gap:.35rem;font-size:.84rem;color:var(--text-secondary);cursor:pointer}
+.days input{accent-color:var(--accent-primary);width:15px;height:15px}
+input:focus,select:focus{outline:none;border-color:var(--accent-primary)}
+input:disabled{opacity:.55;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;margin-top:.4rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:600;padding:.5rem .6rem;border-bottom:1px solid var(--border-color)}
+td{padding:.4rem .6rem;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+td.dayno{color:var(--accent-primary);font-weight:700;width:60px;text-align:center}
+td input{width:100%}
+.shift-tag{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;padding:.12rem .5rem;border-radius:20px;font-weight:600}
+.tag-day{background:rgba(245,158,11,.15);color:#fbbf24}
+.tag-night{background:rgba(99,102,241,.18);color:#a5b4fc}
+.rm{background:transparent;border:1px solid var(--border-color);color:var(--text-muted);border-radius:8px;width:30px;height:30px;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center}
+.rm:hover{border-color:var(--danger);color:var(--danger)}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.15rem;border:none;border-radius:11px;font-size:.87rem;font-weight:600;font-family:inherit;cursor:pointer;transition:var(--transition)}
+.btn-ghost{background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color)}
+.btn-ghost:hover{color:var(--text-primary);border-color:var(--accent-primary)}
+.btn-primary{background:var(--accent-gradient);color:#fff;box-shadow:0 4px 15px rgba(245,158,11,.3)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.actions{display:flex;gap:.7rem;align-items:center;margin-top:1.5rem}
+.preview{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(217,125,6,.05));border:1px solid rgba(245,158,11,.25);border-radius:14px;padding:1.1rem 1.3rem;display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap}
+.preview .who{font-size:1.35rem;font-weight:700}
+.preview .lbl{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.readonly-note{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:#a5b4fc;border-radius:10px;padding:.7rem 1rem;font-size:.82rem;margin-bottom:1.4rem}
+.toast{position:fixed;bottom:24px;right:24px;padding:.9rem 1.3rem;border-radius:12px;font-weight:600;font-size:.88rem;z-index:900;box-shadow:0 8px 30px rgba(0,0,0,.5);transform:translateY(20px);opacity:0;transition:.25s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:#065f46;color:#d1fae5}.toast.err{background:#7f1d1d;color:#fee2e2}
+</style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+
+{% set active_page = 'nobet' %}
+{% include '_sidebar.html' %}
+
+<div class="wrap">
+  <div class="page-head">
+    <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    <h1>On-call Roster</h1>
+  </div>
+  <p class="sub">The ACK report shows <b>who was on call when each alarm fired</b> — define the repeating cycle once and the system advances it by date automatically. After midnight (00:00 until the day shift starts) the night shift counts as the previous day's night.</p>
+
+  <div id="roNote" class="readonly-note" style="display:none">Only <b>admin</b> can edit this list. You are in view-only mode.</div>
+
+  <div class="preview" id="preview">
+    <div><div class="lbl">On call now</div><div class="who" id="pvWho">—</div></div>
+    <div style="margin-left:auto;text-align:right"><div class="lbl">Shift</div><div id="pvShift" style="font-weight:600;margin-top:2px">—</div></div>
+  </div>
+
+  <div class="card" style="margin-top:1.4rem">
+    <h2>Shift Hours</h2>
+    <p class="hint">Shifts are computed from these hours. The day shift runs [day start – night start); the night shift covers the remaining hours.</p>
+    <div class="grid">
+      <div class="fld"><label>Day shift start</label><input type="time" id="dayStart" step="3600" value="08:00"></div>
+      <div class="fld"><label>Night shift start</label><input type="time" id="nightStart" step="3600" value="20:00"></div>
+      <div class="fld"><label>Cycle start date (day 1)</label><input type="date" id="cycleStart"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cycle Table</h2>
+    <p class="hint">Each row is one day of the cycle. The table repeats in order, indefinitely, from the start date.</p>
+    <table>
+      <thead><tr><th>Day</th><th>Day shift <span class="shift-tag tag-day">DAY</span></th><th>Night shift <span class="shift-tag tag-night">NIGHT</span></th><th></th></tr></thead>
+      <tbody id="cycleBody"></tbody>
+    </table>
+    <div style="margin-top:1rem"><button class="btn btn-ghost" id="addRow"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add day</button></div>
+  </div>
+
+  <div class="actions" style="margin-bottom:2rem">
+    <button class="btn btn-primary" id="saveBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save</button>
+    <span id="cycleInfo" style="color:var(--text-muted);font-size:.82rem"></span>
+  </div>
+
+  <div class="card">
+    <h2>Business Hours</h2>
+    <p class="hint">Used by the Alarm Report and the scheduled reports to split alarms into business hours and after hours. Separate from the on-call shifts above.</p>
+    <div class="grid">
+      <div class="fld"><label>Start</label><select id="bhStart"></select></div>
+      <div class="fld"><label>End</label><select id="bhEnd"></select></div>
+      <div class="fld"><label>Days</label><div class="days" id="bhDays"></div></div>
+    </div>
+    <div class="actions" style="margin-top:1.1rem"><button class="btn btn-primary" id="bhSave">Save business hours</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let canEdit=false;
+
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function toast(msg,ok){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',2600)}
+
+function hourFromTime(v){const p=(v||'').split(':');return p.length?parseInt(p[0],10)||0:0}
+function pad(n){return String(n).padStart(2,'0')}
+
+function addRow(gunduz,gece){
+  const tb=document.getElementById('cycleBody');
+  const tr=document.createElement('tr');
+  const n=tb.children.length+1;
+  tr.innerHTML=`<td class="dayno">${n}</td>
+    <td><input type="text" class="g-gunduz" placeholder="Day shift name" value="${esc(gunduz||'')}"></td>
+    <td><input type="text" class="g-gece" placeholder="Night shift name" value="${esc(gece||'')}"></td>
+    <td><button class="rm" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td>`;
+  tr.querySelector('.rm').onclick=()=>{tr.remove();renumber();updatePreview()};
+  tr.querySelectorAll('input').forEach(i=>{i.disabled=!canEdit;i.addEventListener('input',updatePreview)});
+  tb.appendChild(tr);
+  renumber();
+}
+function renumber(){[...document.getElementById('cycleBody').children].forEach((tr,i)=>tr.querySelector('.dayno').textContent=i+1);document.getElementById('cycleInfo').textContent=I18N.t('{0}-day cycle',document.getElementById('cycleBody').children.length)}
+
+function collectCycle(){
+  return [...document.getElementById('cycleBody').children].map(tr=>({
+    gunduz:tr.querySelector('.g-gunduz').value.trim(),
+    gece:tr.querySelector('.g-gece').value.trim()
+  }));
+}
+
+// Exact copy of the server-side nobetci_for logic (for live preview)
+function nobetciFor(dt,cfg){
+  if(!cfg.cycleStart||!cfg.cycle.length)return null;
+  const start=new Date(cfg.cycleStart+'T00:00:00');
+  const ds=cfg.dayStartHour, ns=cfg.nightStartHour;
+  const h=dt.getHours();
+  let vardiya,gun;
+  if(h>=ds&&h<ns){vardiya='gunduz';gun=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate());}
+  else{vardiya='gece';gun=(h<ds)?new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()-1):new Date(dt.getFullYear(),dt.getMonth(),dt.getDate());}
+  const delta=Math.floor((gun-start)/86400000);
+  let idx=((delta%cfg.cycle.length)+cfg.cycle.length)%cfg.cycle.length;
+  const e=cfg.cycle[idx];
+  return {who:vardiya==='gunduz'?e.gunduz:e.gece,vardiya};
+}
+function currentCfg(){
+  return {
+    cycleStart:document.getElementById('cycleStart').value,
+    dayStartHour:hourFromTime(document.getElementById('dayStart').value),
+    nightStartHour:hourFromTime(document.getElementById('nightStart').value),
+    cycle:collectCycle()
+  };
+}
+function updatePreview(){
+  const cfg=currentCfg();
+  const r=nobetciFor(new Date(),cfg);
+  document.getElementById('pvWho').textContent=r&&r.who?r.who:'—';
+  document.getElementById('pvShift').textContent=r?(r.vardiya==='gunduz'?I18N.t('Day ({0}:00–{1}:00)',pad(cfg.dayStartHour),pad(cfg.nightStartHour)):I18N.t('Night ({0}:00–{1}:00)',pad(cfg.nightStartHour),pad(cfg.dayStartHour))):'—';
+}
+
+async function load(){
+  const j=await (await fetch('/api/nobet')).json();
+  if(!j.success){toast('Could not load',false);return}
+  canEdit=j.canEdit;
+  const c=j.config;
+  document.getElementById('cycleStart').value=c.cycleStart||'';
+  document.getElementById('dayStart').value=pad(c.dayStartHour)+':00';
+  document.getElementById('nightStart').value=pad(c.nightStartHour)+':00';
+  const tb=document.getElementById('cycleBody');tb.innerHTML='';
+  (c.cycle&&c.cycle.length?c.cycle:[{gunduz:'',gece:''}]).forEach(d=>addRow(d.gunduz,d.gece));
+  if(!canEdit){
+    document.getElementById('roNote').style.display='block';
+    ['dayStart','nightStart','cycleStart'].forEach(id=>document.getElementById(id).disabled=true);
+    document.getElementById('addRow').disabled=true;
+    document.getElementById('saveBtn').disabled=true;
+    document.querySelectorAll('.rm').forEach(b=>b.style.display='none');
+  }
+  updatePreview();
+}
+
+async function save(){
+  const cfg=currentCfg();
+  if(cfg.nightStartHour<=cfg.dayStartHour){toast('Night start must be after day start',false);return}
+  const btn=document.getElementById('saveBtn');btn.disabled=true;
+  const res=await (await fetch('/api/nobet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)})).json();
+  btn.disabled=false;
+  if(res.success){toast('On-call roster saved ✓',true)}
+  else{toast(res.error||'Could not save',false)}
+}
+
+// ── Business hours ──
+const BH_DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+async function loadHours(){
+  const hh=h=>pad(h)+':00';
+  document.getElementById('bhStart').innerHTML=Array.from({length:24},(_,h)=>`<option value="${h}">${hh(h)}</option>`).join('');
+  document.getElementById('bhEnd').innerHTML=Array.from({length:24},(_,h)=>`<option value="${h+1}">${hh(h+1)}</option>`).join('');
+  document.getElementById('bhDays').innerHTML=BH_DAYS.map((d,i)=>`<label><input type="checkbox" value="${i}"> <span>${d}</span></label>`).join('');
+  const j=await (await fetch('/api/business-hours')).json();
+  if(!j.success)return;
+  document.getElementById('bhStart').value=j.hours.start;
+  document.getElementById('bhEnd').value=j.hours.end;
+  document.querySelectorAll('#bhDays input').forEach(i=>{i.checked=j.hours.days.includes(Number(i.value));i.disabled=!j.canEdit});
+  ['bhStart','bhEnd','bhSave'].forEach(id=>document.getElementById(id).disabled=!j.canEdit);
+}
+async function saveHours(){
+  const body={start:Number(document.getElementById('bhStart').value),end:Number(document.getElementById('bhEnd').value),
+    days:[...document.querySelectorAll('#bhDays input:checked')].map(i=>Number(i.value))};
+  if(body.end<=body.start){toast('The end must be after the start',false);return}
+  if(!body.days.length){toast('Select at least one day',false);return}
+  const res=await (await fetch('/api/business-hours',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  if(res.success){toast('Business hours saved ✓',true)}else{toast(res.error||'Could not save',false)}
+}
+document.getElementById('bhSave').onclick=saveHours;
+loadHours();
+
+document.getElementById('addRow').onclick=()=>{addRow('','');updatePreview()};
+document.getElementById('saveBtn').onclick=save;
+['dayStart','nightStart','cycleStart'].forEach(id=>document.getElementById(id).addEventListener('input',updatePreview));
+load();
+</script>
+</body>
+</html>

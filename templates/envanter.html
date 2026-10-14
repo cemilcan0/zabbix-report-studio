@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="/static/i18n.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory — Zabbix Report Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary:#100e0a; --bg-secondary:#16140e; --bg-tertiary:#211d14;
+      --bg-card:rgba(28,25,17,0.85); --bg-glass:rgba(240,230,200,0.04);
+      --text-primary:#fff; --text-secondary:#a59f91; --text-muted:#726c5e;
+      --accent-primary:#f59e0b; --accent-secondary:#d97d06;
+      --accent-gradient:linear-gradient(135deg,#f59e0b 0%,#d97d06 100%);
+      --success:#10b981; --danger:#ef4444; --warning:#f59e0b; --info:#3b82f6;
+      --border-color:rgba(255,255,255,0.08);
+      --border-radius:12px; --border-radius-lg:20px;
+      --shadow-lg:0 8px 40px rgba(0,0,0,0.5);
+      --shadow-glow:0 0 40px rgba(245,158,11,0.3);
+      --transition:0.15s ease;
+    }
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'IBM Plex Sans',-apple-system,sans-serif; background:radial-gradient(ellipse at top,rgba(245,158,11,0.08) 0%,transparent 50%),var(--bg-primary); color:var(--text-primary); min-height:100vh; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background:var(--bg-tertiary); border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:var(--accent-primary); }
+
+    /* HEADER */
+    .app-header {
+      background:rgba(18,18,26,0.9);
+      backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border-color);
+      padding:0 2rem;
+      height:64px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:100;
+    }
+    .logo { display:flex; align-items:center; gap:0.75rem; }
+    .logo-icon { width:38px; height:38px; background:var(--accent-gradient); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+    .logo-text { font-size:1.1rem; font-weight:700; background:var(--accent-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .header-right { display:flex; align-items:center; gap:0.75rem; }
+    .btn {
+      display:inline-flex; align-items:center; gap:0.4rem;
+      padding:0.6rem 1.2rem; border:none; border-radius:var(--border-radius);
+      font-size:0.85rem; font-weight:600; font-family:inherit; cursor:pointer; transition:var(--transition);
+      text-decoration:none;
+    }
+    .btn-primary { background:var(--accent-gradient); color:#fff; box-shadow:0 4px 15px rgba(245,158,11,0.3); }
+    .btn-primary:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 20px rgba(245,158,11,0.4); }
+    .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn-success { background:rgba(16,185,129,0.15); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); }
+    .btn-success:hover:not(:disabled) { background:rgba(16,185,129,0.25); transform:translateY(-2px); }
+    .btn-success:disabled { opacity:0.4; cursor:not-allowed; }
+    .btn-outline { background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); }
+    .btn-outline:hover { background:var(--bg-tertiary); color:var(--text-primary); }
+
+    /* MAIN */
+    .main { max-width:1600px; margin:0 auto; padding:2rem; }
+
+    /* HERO */
+    .hero { margin-bottom:2rem; }
+    .hero h1 { font-size:1.75rem; font-weight:700; margin-bottom:0.4rem; background:var(--accent-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero p { color:var(--text-muted); font-size:0.9rem; }
+
+    /* ACTION BAR */
+    .action-bar {
+      background:var(--bg-card);
+      backdrop-filter:blur(20px);
+      border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg);
+      padding:1.25rem 1.5rem;
+      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;
+      margin-bottom:1.5rem;
+    }
+    .action-bar-left { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .action-bar-right { display:flex; align-items:center; gap:0.75rem; }
+    .last-update { font-size:0.8rem; color:var(--text-muted); }
+    .last-update span { color:var(--accent-primary); font-weight:500; }
+
+    /* STATS */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .stat-card {
+      background:var(--bg-card);
+      border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg);
+      padding:1.25rem 1.5rem;
+      transition:var(--transition);
+    }
+    .stat-card:hover { border-color:rgba(245,158,11,0.3); transform:translateY(-2px); }
+    .stat-label { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.4rem; }
+    .stat-value { font-size:1.75rem; font-weight:700; }
+    .stat-card.total .stat-value { background:var(--accent-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .stat-card.san .stat-value { color:#60a5fa; }
+    .stat-card.servers .stat-value { color:#6ee7b7; }
+    .stat-card.storage .stat-value { color:#fcd34d; }
+    .stat-card.tape .stat-value { color:#c4b5fd; }
+    .stat-sub { font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem; }
+
+    /* TABS */
+    .tabs {
+      display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;
+      background:var(--bg-card);
+      border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg);
+      padding:0.5rem;
+    }
+    .tab {
+      padding:0.6rem 1.25rem;
+      border:none; border-radius:var(--border-radius);
+      font-size:0.85rem; font-weight:600; font-family:inherit;
+      cursor:pointer; transition:var(--transition);
+      color:var(--text-muted); background:transparent;
+      display:flex; align-items:center; gap:0.4rem;
+    }
+    .tab:hover { color:var(--text-primary); background:var(--bg-tertiary); }
+    .tab.active { background:var(--accent-gradient); color:#fff; box-shadow:0 2px 10px rgba(245,158,11,0.3); }
+    .tab .count { font-size:0.7rem; padding:0.1rem 0.45rem; border-radius:8px; background:rgba(255,255,255,0.1); }
+    .tab.active .count { background:rgba(255,255,255,0.2); }
+
+    /* TABLE PANEL */
+    .table-panel {
+      background:var(--bg-card);
+      border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg);
+      overflow:hidden;
+    }
+    .table-panel-header {
+      padding:1rem 1.5rem;
+      border-bottom:1px solid var(--border-color);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .table-panel-title { font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; color:var(--text-secondary); }
+    .search-input-wrap {
+      display:flex; align-items:center; gap:0.5rem;
+      padding:0.5rem 0.875rem;
+      background:var(--bg-tertiary);
+      border:1px solid var(--border-color);
+      border-radius:var(--border-radius);
+      min-width:240px;
+    }
+    .search-input-wrap svg { width:15px; height:15px; color:var(--text-muted); flex-shrink:0; }
+    .search-input-wrap input { background:transparent; border:none; color:var(--text-primary); font-size:0.85rem; font-family:inherit; outline:none; width:100%; }
+    .search-input-wrap input::placeholder { color:var(--text-muted); }
+
+    .table-wrapper { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; min-width:700px; }
+    thead { background:rgba(245,158,11,0.06); }
+    th { padding:0.9rem 1rem; text-align:left; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border-color); white-space:nowrap; }
+    td { padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.04); }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,0.025); color:var(--text-primary); }
+
+    .badge-enabled { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.65rem; background:rgba(16,185,129,0.12); color:#6ee7b7; border:1px solid rgba(16,185,129,0.25); border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .badge-disabled { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.65rem; background:rgba(239,68,68,0.12); color:#fca5a5; border:1px solid rgba(239,68,68,0.25); border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .badge-empty { display:inline-block; padding:0.2rem 0.65rem; background:rgba(107,114,128,0.15); color:var(--text-muted); border:1px solid rgba(107,114,128,0.2); border-radius:20px; font-size:0.72rem; }
+
+    .dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+    .dot-green { background:var(--success); }
+    .dot-red { background:var(--danger); }
+
+    .no-data { text-align:center; padding:3rem; color:var(--text-muted); font-size:0.9rem; }
+
+    /* EKSIK PANEL */
+    .eksik-panel {
+      background:var(--bg-card);
+      border:1px solid rgba(239,68,68,0.2);
+      border-radius:var(--border-radius-lg);
+      margin-top:1.5rem;
+      overflow:hidden;
+    }
+    .eksik-header {
+      padding:1rem 1.5rem;
+      border-bottom:1px solid rgba(239,68,68,0.15);
+      display:flex; align-items:center; gap:0.5rem;
+      font-size:0.9rem; font-weight:600; color:#fca5a5;
+      cursor:pointer; user-select:none;
+    }
+    .eksik-header svg { width:18px; height:18px; }
+    .eksik-body { padding:1.5rem; overflow-x:auto; }
+    .eksik-table th { color:#fca5a5; }
+    .eksik-cell-ok { background:rgba(16,185,129,0.08); color:#6ee7b7; text-align:center; font-size:0.75rem; font-weight:600; }
+    .eksik-cell-no { background:rgba(239,68,68,0.08); color:#fca5a5; text-align:center; font-size:0.75rem; font-weight:600; }
+
+    /* LOADING */
+    .loading-overlay {
+      position:fixed; inset:0;
+      background:rgba(10,10,15,0.85);
+      backdrop-filter:blur(8px);
+      display:flex; align-items:center; justify-content:center;
+      z-index:1000;
+    }
+    .loading-overlay.hidden { display:none; }
+    .loading-box { text-align:center; }
+    .spinner {
+      width:48px; height:48px;
+      border:3px solid var(--bg-tertiary);
+      border-top-color:var(--accent-primary);
+      border-radius:50%;
+      animation:spin 0.8s linear infinite;
+      margin:0 auto 1rem;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-box p { color:var(--text-secondary); font-size:0.9rem; }
+
+    /* TOAST */
+    .toast-container { position:fixed; bottom:2rem; right:2rem; display:flex; flex-direction:column; gap:0.75rem; z-index:1001; }
+    .toast {
+      padding:0.875rem 1.25rem;
+      background:var(--bg-card);
+      backdrop-filter:blur(20px);
+      border:1px solid var(--border-color);
+      border-radius:var(--border-radius);
+      box-shadow:var(--shadow-lg);
+      display:flex; align-items:center; gap:0.75rem;
+      min-width:260px; max-width:400px;
+      animation:slideIn 0.3s ease;
+      font-size:0.85rem;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
+    .toast.success { border-left:3px solid var(--success); }
+    .toast.error   { border-left:3px solid var(--danger); }
+    .toast.info    { border-left:3px solid var(--info); }
+
+    .hidden { display:none !important; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+{% set active_page = 'envanter' %}
+{% include '_sidebar.html' %}
+
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <span class="logo-text">Inventory</span>
+  </div>
+  <div class="header-right">
+    <a href="/" class="btn btn-outline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Dashboard
+    </a>
+    <button id="generateBtn" class="btn btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+      </svg>
+      Refresh
+    </button>
+    <button id="downloadBtn" class="btn btn-success" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download Excel
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="hero">
+    <h1>Infrastructure Inventory</h1>
+    <p>Serial numbers of the devices in the SAN SW, Servers, Storage and Tape categories, pulled from Zabbix.</p>
+  </div>
+
+  <div class="action-bar">
+    <div class="action-bar-left">
+      <span id="lastUpdate" class="last-update hidden">Last update: <span id="lastUpdateTime"></span></span>
+      <span id="totalBadge" class="last-update hidden">Total: <span id="totalCount" style="color:var(--accent-primary);font-weight:600;"></span> devices</span>
+    </div>
+    <div class="action-bar-right">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="globalSearch" placeholder="Search location, hostname, IP...">
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats" id="statsRow" style="display:none;">
+    <div class="stat-card total">
+      <div class="stat-label">Total Devices</div>
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-sub" id="statTotalSub"></div>
+    </div>
+    <div class="stat-card san">
+      <div class="stat-label">SAN SW</div>
+      <div class="stat-value" id="statSAN">0</div>
+      <div class="stat-sub" id="statSANSub"></div>
+    </div>
+    <div class="stat-card servers">
+      <div class="stat-label">Servers</div>
+      <div class="stat-value" id="statServers">0</div>
+      <div class="stat-sub" id="statServersSub"></div>
+    </div>
+    <div class="stat-card storage">
+      <div class="stat-label">Storage</div>
+      <div class="stat-value" id="statStorage">0</div>
+      <div class="stat-sub" id="statStorageSub"></div>
+    </div>
+    <div class="stat-card tape">
+      <div class="stat-label">Tape</div>
+      <div class="stat-value" id="statTape">0</div>
+      <div class="stat-sub" id="statTapeSub"></div>
+    </div>
+  </div>
+
+  <!-- TABS + TABLE -->
+  <div id="dataSection" style="display:none;">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-cat="SAN SW">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+        SAN SW <span class="count" id="tabCountSAN">0</span>
+      </button>
+      <button class="tab" data-cat="Servers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        Servers <span class="count" id="tabCountServers">0</span>
+      </button>
+      <button class="tab" data-cat="Storage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Storage <span class="count" id="tabCountStorage">0</span>
+      </button>
+      <button class="tab" data-cat="Tape">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>
+        Tape <span class="count" id="tabCountTape">0</span>
+      </button>
+    </div>
+
+    <div class="table-panel">
+      <div class="table-panel-header">
+        <span class="table-panel-title" id="tableTitle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          SAN SW
+        </span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Serial / Model</th>
+              <th>Name</th>
+              <th>Hostname</th>
+              <th>IP Address</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EKSİK KATEGORİLER -->
+    <div class="eksik-panel" id="eksikPanel" style="display:none;">
+      <div class="eksik-header" onclick="toggleEksik()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Missing Categories
+        <svg id="eksikChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-left:auto;transition:0.3s;"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="eksik-body" id="eksikBody">
+        <table class="eksik-table" style="width:100%;border-collapse:collapse;">
+          <thead id="eksikHead"></thead>
+          <tbody id="eksikTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div id="emptyState" style="text-align:center;padding:5rem 2rem;color:var(--text-muted);">
+    <div style="font-size:4rem;margin-bottom:1rem;opacity:0.4;">📦</div>
+    <p style="font-size:1rem;margin-bottom:0.5rem;color:var(--text-secondary);">Loading data…</p>
+    <p style="font-size:0.85rem;">Fetching inventory data from Zabbix. If something goes wrong, try "Refresh".</p>
+  </div>
+
+</div>
+
+<!-- LOADING -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p id="loadingText">Fetching data from Zabbix...</p>
+  </div>
+</div>
+
+<!-- TOAST --> 
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const SHEET_ORDER = ['SAN SW', 'Servers', 'Storage', 'Tape'];
+const LOCATIONS = {{ locations_json | safe }};
+
+
+let reportData = null;
+let eksikData = null;
+let currentCat = 'SAN SW';
+let searchFilter = '';
+let mode = 'category';
+let categories = SHEET_ORDER.slice();
+
+// INIT
+document.getElementById('generateBtn').addEventListener('click', generateReport);
+document.getElementById('downloadBtn').addEventListener('click', downloadExcel);
+// Data is fetched automatically on page load (no separate "fetch" step needed).
+// generateReport is a function declaration, so hoisting makes it safe to call here.
+generateReport();
+document.getElementById('globalSearch').addEventListener('input', e => {
+  searchFilter = e.target.value.toLowerCase();
+  renderTable(currentCat);
+});
+const TABLE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>';
+
+// Build tabs dynamically from the active mode's categories (category mode: 4 categories, generic mode: one).
+function buildTabs() {
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = categories.map((c, i) =>
+    `<button class="tab${i === 0 ? ' active' : ''}" data-cat="${esc(c)}">${esc(c)} <span class="count" data-count="${esc(c)}">0</span></button>`
+  ).join('');
+  tabsEl.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      currentCat = tab.dataset.cat;
+      tabsEl.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tableTitle').innerHTML = TABLE_ICON + ' ' + esc(currentCat);
+      renderTable(currentCat);
+    });
+  });
+}
+
+async function generateReport() {
+  showLoading('Fetching data from Zabbix...');
+  document.getElementById('generateBtn').disabled = true;
+  try {
+    const res = await fetch('/api/generate', { method:'POST', headers:{'Content-Type':'application/json'} });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error);
+
+    reportData = result.data;
+    eksikData = result.eksik;
+    const summary = result.summary;
+    mode = result.mode || 'category';
+    categories = result.categories || SHEET_ORDER.slice();
+    currentCat = categories[0];
+
+    // Set the title and description based on the mode
+    document.querySelector('.hero h1').textContent =
+      mode === 'all' ? 'Device Inventory' : 'Infrastructure Inventory';
+    document.querySelector('.hero p').textContent = mode === 'all'
+      ? 'Serial numbers of every host on this Zabbix server, where available.'
+      : 'Serial numbers of the devices in the SAN SW, Servers, Storage and Tape categories, pulled from Zabbix.';
+
+    buildTabs();
+
+    document.getElementById('statsRow').style.display = '';
+    document.getElementById('dataSection').style.display = '';
+    document.getElementById('emptyState').style.display = 'none';
+
+    const total = summary.TOTAL || 0;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statTotalSub').textContent = 'devices registered in total';
+
+    // Per-category stat cards only make sense in category mode; hide them in generic mode.
+    document.querySelectorAll('.stat-card').forEach(c => {
+      if (!c.classList.contains('total')) c.style.display = (mode === 'category') ? '' : 'none';
+    });
+    if (mode === 'category') {
+      const CAT_ID = { 'SAN SW':'SAN', 'Servers':'Servers', 'Storage':'Storage', 'Tape':'Tape' };
+      ['SAN SW','Servers','Storage','Tape'].forEach(cat => {
+        const s = summary[cat] || {};
+        const id = CAT_ID[cat];
+        const statEl  = document.getElementById('stat' + id);
+        const statSub = document.getElementById('stat' + id + 'Sub');
+        if (statEl)  statEl.textContent  = s.total || 0;
+        if (statSub) statSub.textContent = I18N.t('{0} active, {1} inactive', s.enabled||0, s.disabled||0);
+      });
+    }
+
+    // Tab counts (for both modes, via the dynamic data-count)
+    categories.forEach(cat => {
+      const s = summary[cat] || {};
+      const el = document.querySelector(`#tabs .count[data-count="${cat}"]`);
+      if (el) el.textContent = s.total || 0;
+    });
+
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('totalBadge').classList.remove('hidden');
+    document.getElementById('lastUpdateTime').textContent = result.generated_at;
+    document.getElementById('lastUpdate').classList.remove('hidden');
+
+    document.getElementById('tableTitle').innerHTML = TABLE_ICON + ' ' + esc(currentCat);
+    renderTable(currentCat);
+    renderEksik();
+
+    document.getElementById('downloadBtn').disabled = false;
+    showToast(I18N.t('{0} devices loaded', total), 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+    document.getElementById('generateBtn').disabled = false;
+  }
+}
+
+function renderTable(cat) {
+  if (!reportData) return;
+  let rows = reportData[cat] || [];
+
+  if (searchFilter) {
+    rows = rows.filter(r =>
+      (r.lokasyon||'').toLowerCase().includes(searchFilter) ||
+      (r.hostname||'').toLowerCase().includes(searchFilter) ||
+      (r.name||'').toLowerCase().includes(searchFilter) ||
+      (r.ip||'').toLowerCase().includes(searchFilter) ||
+      (r.serial||'').toLowerCase().includes(searchFilter)
+    );
+  }
+
+  const isTape = cat === 'Tape';
+  const serialLabel = isTape ? 'Device Model' : 'Serial Number';
+
+  if (!rows.length) {
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" class="no-data">No records for this category</td></tr>`;
+    return;
+  }
+
+  document.getElementById('tableBody').innerHTML = rows.map(r => `
+    <tr>
+      <td style="color:var(--text-primary);font-weight:500;">${esc(r.lokasyon)}</td>
+      <td>${r.serial ? `<code style="font-size:0.78rem;color:#fbbf24;background:rgba(245,158,11,0.08);padding:2px 6px;border-radius:4px;">${esc(r.serial)}</code>` : '<span class="badge-empty">—</span>'}</td>
+      <td>${esc(r.name)}</td>
+      <td><code style="font-size:0.78rem;color:var(--text-secondary);">${esc(r.hostname)}</code></td>
+      <td><code style="font-size:0.78rem;color:#6ee7b7;">${esc(r.ip) || '—'}</code></td>
+      <td>${r.status === 'Enabled'
+        ? '<span class="badge-enabled"><span class="dot dot-green"></span>Enabled</span>'
+        : '<span class="badge-disabled"><span class="dot dot-red"></span>Disabled</span>'
+      }</td>
+    </tr>
+  `).join('');
+}
+
+function renderEksik() {
+  if (mode !== 'category' || !eksikData || !Object.keys(eksikData).length) {
+    document.getElementById('eksikPanel').style.display = 'none';
+    return;
+  }
+  document.getElementById('eksikPanel').style.display = '';
+
+  const cats = ['SAN SW','Servers','Storage','Tape'];
+  document.getElementById('eksikHead').innerHTML = `<tr>
+    <th style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid rgba(239,68,68,0.15);">Location</th>
+    ${cats.map(c=>`<th style="padding:0.75rem 1rem;font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid rgba(239,68,68,0.15);text-align:center;">${c}</th>`).join('')}
+  </tr>`;
+
+  document.getElementById('eksikTableBody').innerHTML = LOCATIONS.map(loc => {
+    const missing = eksikData[loc] || [];
+    if (!missing.length) return '';
+    return `<tr>
+      <td style="padding:0.6rem 1rem;font-size:0.82rem;color:var(--text-secondary);border-bottom:1px solid rgba(255,255,255,0.04);">${esc(loc)}</td>
+      ${cats.map(c => missing.includes(c)
+        ? `<td class="eksik-cell-no" style="padding:0.6rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);">MISSING</td>`
+        : `<td class="eksik-cell-ok" style="padding:0.6rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);">PRESENT</td>`
+      ).join('')}
+    </tr>`;
+  }).filter(Boolean).join('');
+}
+
+function toggleEksik() {
+  const body = document.getElementById('eksikBody');
+  const chevron = document.getElementById('eksikChevron');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  chevron.style.transform = hidden ? '' : 'rotate(-90deg)';
+}
+
+async function downloadExcel() {
+  document.getElementById('downloadBtn').disabled = true;
+  showLoading('Building the Excel file...');
+  try {
+    const res = await fetch('/api/download', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ lang: I18N.lang }) });
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Inventory_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Excel downloaded', 'success');
+  } catch(e) {
+    showToast('Download error: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+    document.getElementById('downloadBtn').disabled = false;
+  }
+}
+
+function showLoading(text='Loading...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+function showToast(msg, type='info') {
+  const icons = {
+    success:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    error:'<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+  };
+  const colors = { success:'var(--success)', error:'var(--danger)', info:'var(--info)' };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${colors[type]||colors.info}" stroke-width="2" width="18" height="18">${icons[type]||icons.info}</svg>${esc(msg)}`;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(), 4000);
+}
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

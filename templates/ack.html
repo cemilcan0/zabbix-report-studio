@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/static/i18n.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACK Report - Zabbix Report Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg-primary:#100e0a;--bg-secondary:#16140e;--bg-tertiary:#211d14;--bg-card:rgba(28,25,17,0.9);--text-primary:#fff;--text-secondary:#a59f91;--text-muted:#726c5e;--accent-primary:#f59e0b;--accent-secondary:#d97d06;--accent-gradient:linear-gradient(135deg,#f59e0b 0%,#d97d06 100%);--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--border-color:rgba(255,255,255,0.08);--border-radius:12px;--border-radius-lg:20px;--transition:0.15s ease;--shadow-lg:0 8px 40px rgba(0,0,0,0.6)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',-apple-system,sans-serif;background:radial-gradient(ellipse at top,rgba(245,158,11,0.08) 0%,transparent 50%),var(--bg-primary);color:var(--text-primary);min-height:100vh}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg-secondary)}::-webkit-scrollbar-thumb{background:var(--bg-tertiary);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--accent-primary)}
+
+/* HEADER */
+.app-header{background:rgba(18,18,26,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-color);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300}
+.logo{display:flex;align-items:center;gap:0.75rem}
+.logo-icon{width:38px;height:38px;background:var(--accent-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-text{font-size:1.1rem;font-weight:700;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;background:transparent;border:1px solid var(--border-color);border-radius:var(--border-radius);color:var(--text-secondary);font-size:0.85rem;font-family:inherit;cursor:pointer;text-decoration:none;transition:var(--transition)}
+.nav-btn:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+
+/* TOOLBAR */
+.toolbar{background:rgba(18,18,26,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-color);padding:0.75rem 2rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;position:sticky;top:64px;z-index:200}
+.btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1.1rem;border:none;border-radius:var(--border-radius);font-size:0.85rem;font-weight:600;font-family:inherit;cursor:pointer;transition:var(--transition)}
+.btn-primary{background:var(--accent-gradient);color:#fff;box-shadow:0 4px 15px rgba(245,158,11,0.3)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,158,11,0.4)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.btn-success{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3)}
+.btn-success:hover{background:rgba(16,185,129,0.25);transform:translateY(-1px)}
+
+/* FILTER PILL */
+.filter-pill-wrap{position:relative}
+.filter-pill{display:inline-flex;align-items:center;gap:0.45rem;padding:0.45rem 0.875rem;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:20px;font-size:0.82rem;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:var(--transition);user-select:none;white-space:nowrap}
+.filter-pill:hover{border-color:rgba(245,158,11,0.4);color:var(--text-primary)}
+.filter-pill.active{border-color:rgba(245,158,11,0.5);background:rgba(245,158,11,0.12);color:#fbbf24}
+.pill-chevron{transition:transform 0.2s;flex-shrink:0;opacity:0.6}
+.filter-pill.open .pill-chevron{transform:rotate(180deg)}
+.toolbar-sep{width:1px;height:22px;background:var(--border-color);flex-shrink:0;margin:0 0.25rem}
+
+/* DROPDOWN */
+.dd-overlay{position:fixed;inset:0;z-index:190;display:none}
+.dd-overlay.show{display:block}
+.dd-panel{position:absolute;top:calc(100% + 10px);left:0;z-index:210;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--border-radius-lg);box-shadow:var(--shadow-lg);padding:1.25rem;display:none;flex-direction:column;gap:0.875rem;backdrop-filter:blur(20px);min-width:280px}
+.dd-panel.show{display:flex;animation:ddIn 0.18s ease}
+@keyframes ddIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.dd-title{font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em}
+.form-group{display:flex;flex-direction:column;gap:0.35rem}
+.form-group label{font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em}
+.form-group input,.form-group select{padding:0.55rem 0.875rem;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--border-radius);color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;transition:var(--transition);width:100%}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent-primary);box-shadow:0 0 0 3px rgba(245,158,11,0.15)}
+.form-group input::placeholder,.form-group select option{color:var(--text-muted)}
+.form-group select option{background:var(--bg-secondary)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem}
+.mode-toggle{display:flex;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--border-radius);padding:3px;gap:3px}
+.mode-btn{flex:1;padding:0.4rem;border:none;border-radius:8px;font-size:0.8rem;font-weight:600;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-muted);transition:var(--transition);text-align:center}
+.mode-btn.active{background:var(--accent-gradient);color:#fff}
+
+/* GROUP DROPDOWN */
+.dd-panel-wide{min-width:360px}
+.group-actions{display:flex;gap:0.4rem;align-items:center}
+.ga-btn{padding:3px 10px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-muted);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;transition:var(--transition)}
+.ga-btn:hover{color:var(--text-primary);border-color:rgba(245,158,11,0.4)}
+.sel-info{font-size:0.72rem;color:var(--accent-primary);font-weight:500;margin-left:auto}
+.gs-input{padding:0.5rem 0.75rem;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--border-radius);color:var(--text-primary);font-size:0.82rem;font-family:inherit;outline:none;width:100%}
+.gs-input::placeholder{color:var(--text-muted)}
+.group-list{max-height:220px;overflow-y:auto;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--border-radius);padding:4px}
+.gi{display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:6px;cursor:pointer;transition:var(--transition);user-select:none}
+.gi:hover{background:rgba(245,158,11,0.1)}
+.gi input[type=checkbox]{accent-color:var(--accent-primary);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.gi .gn{font-size:0.78rem;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gi.sel .gn{color:var(--text-primary)}
+.gi .gc{font-size:0.68rem;color:var(--text-muted);flex-shrink:0}
+
+/* ACK FILTER BUTTONS */
+.ack-filters{display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap}
+.ack-btn{padding:0.4rem 0.875rem;border:1px solid var(--border-color);border-radius:20px;font-size:0.78rem;font-weight:600;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-muted);transition:var(--transition);white-space:nowrap}
+.ack-btn:hover{color:var(--text-primary)}
+.ack-btn.active{color:#fff;border-color:transparent}
+.ack-btn[data-f="all"].active{background:var(--accent-gradient)}
+.ack-btn[data-f="noack"].active{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.ack-btn[data-f="ok"].active{background:linear-gradient(135deg,#10b981,#059669)}
+.ack-btn[data-f="late30"].active{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.ack-btn[data-f="late60"].active{background:linear-gradient(135deg,#d97d06,#7c3aed)}
+.actions-right{margin-left:auto;display:flex;gap:0.5rem;flex-shrink:0}
+
+/* CONTENT */
+.content{padding:1.5rem 2rem}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;margin-bottom:1.25rem}
+@media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;cursor:pointer;transition:var(--transition)}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-card.active-stat{border-color:rgba(245,158,11,0.5);box-shadow:0 0 0 1px rgba(245,158,11,0.2)}
+.stat-label{font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
+.stat-value{font-size:1.5rem;font-weight:700}
+.s-total .stat-value{background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s-noack .stat-value{color:#fca5a5}
+.s-ok .stat-value{color:#6ee7b7}
+.s-late30 .stat-value{color:#fcd34d}
+.s-late60 .stat-value{color:#c4b5fd}
+
+/* TABLE TOOLBAR */
+.table-toolbar{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap}
+.search-wrap{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.875rem;background:var(--bg-card);border:1px solid var(--border-color);border-radius:20px;flex:1;min-width:200px}
+.search-wrap svg{width:14px;height:14px;color:var(--text-muted);flex-shrink:0}
+.search-wrap input{background:transparent;border:none;color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;width:100%}
+.search-wrap input::placeholder{color:var(--text-muted)}
+.result-info{font-size:0.8rem;color:var(--text-muted);white-space:nowrap}
+.result-info span{color:var(--accent-primary);font-weight:600}
+
+/* TABLE */
+.table-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--border-radius-lg);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:1100px}
+thead{background:rgba(245,158,11,0.06)}
+th{padding:0.8rem 1rem;text-align:left;font-size:0.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-color);white-space:nowrap}
+td{padding:0.75rem 1rem;font-size:0.82rem;color:var(--text-secondary);border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.sev{padding:0.15rem 0.5rem;border-radius:20px;font-size:0.68rem;font-weight:700;display:inline-block;white-space:nowrap}
+.sev-5{background:rgba(255,56,56,0.15);color:#ff6b6b;border:1px solid rgba(255,56,56,0.3)}
+.sev-4{background:rgba(255,107,53,0.15);color:#ff9b7a;border:1px solid rgba(255,107,53,0.3)}
+.sev-3{background:rgba(255,167,38,0.15);color:#ffc94d;border:1px solid rgba(255,167,38,0.3)}
+.sev-2{background:rgba(255,238,88,0.15);color:#ffe566;border:1px solid rgba(255,238,88,0.3)}
+.sev-1{background:rgba(66,165,245,0.15);color:#7ec8f5;border:1px solid rgba(66,165,245,0.3)}
+.sev-0{background:rgba(120,144,156,0.15);color:#aab8be;border:1px solid rgba(120,144,156,0.3)}
+.ack-yes{display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.6rem;background:rgba(16,185,129,0.12);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);border-radius:20px;font-size:0.68rem;font-weight:700}
+.ack-no{display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.6rem;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.25);border-radius:20px;font-size:0.68rem;font-weight:700}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-green{background:var(--success)}.dot-red{background:var(--danger)}
+.delay-ok{color:#6ee7b7;font-weight:600}
+.delay-warn{color:#fcd34d;font-weight:600}
+.delay-late{color:#c4b5fd;font-weight:600}
+.delay-none{color:var(--text-muted)}
+.ack-count-badge{display:inline-block;padding:1px 5px;background:rgba(245,158,11,0.2);color:#fbbf24;border-radius:8px;font-size:0.65rem;font-weight:600;margin-left:3px}
+.ack-detail{display:flex;flex-direction:column;gap:3px}
+.ack-entry{padding:5px 7px;background:rgba(245,158,11,0.06);border-radius:6px;border-left:2px solid rgba(245,158,11,0.3);margin-bottom:3px}
+.ack-user{font-size:0.78rem;color:#fbbf24;font-weight:600}
+.ack-tline{font-size:0.7rem;color:var(--text-muted);margin-top:1px}
+.ack-msg{font-size:0.74rem;color:var(--text-secondary);font-style:italic;margin-top:2px;word-break:break-word}
+.clear-ok{color:#6ee7b7;font-weight:600}
+.clear-none{color:var(--text-muted)}
+.empty-state{text-align:center;padding:4rem;color:var(--text-muted)}
+.loading-overlay{position:fixed;inset:0;background:rgba(10,10,15,0.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:1000}
+.loading-overlay.hidden{display:none}
+.spinner{width:48px;height:48px;border:3px solid var(--bg-tertiary);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box{text-align:center}.loading-box p{color:var(--text-secondary);font-size:0.9rem}
+.toast-container{position:fixed;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:0.75rem;z-index:1001}
+.toast{padding:0.875rem 1.25rem;background:var(--bg-card);backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:var(--border-radius);display:flex;align-items:center;gap:0.75rem;min-width:260px;font-size:0.85rem;animation:slideIn 0.3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(100%)}to{opacity:1;transform:translateX(0)}}
+.toast.success{border-left:3px solid var(--success)}.toast.error{border-left:3px solid var(--danger)}
+.hidden{display:none!important}
+
+/* SEVERITY CHECKBOXES */
+.sev-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.35rem}
+.sev-check{display:flex;align-items:center;gap:0.45rem;padding:0.3rem 0.5rem;border-radius:8px;cursor:pointer;font-size:0.78rem;transition:var(--transition);border:1px solid transparent;user-select:none}
+.sev-check:hover{background:rgba(255,255,255,0.04)}
+.sev-check input{width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:var(--accent-primary)}
+.sev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sev-check.checked{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.15)}
+
+/* TOGGLE SWITCHES */
+.toggle-group{display:flex;flex-direction:column;gap:0.5rem}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.45rem 0.6rem;background:var(--bg-tertiary);border-radius:10px;border:1px solid var(--border-color)}
+.toggle-row-label{font-size:0.8rem;color:var(--text-secondary);line-height:1.3;flex:1}
+.toggle-row-label small{display:block;font-size:0.7rem;color:var(--text-muted);margin-top:1px}
+.toggle-switch{position:relative;width:38px;height:20px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:20px;cursor:pointer;transition:0.25s;border:1px solid var(--border-color)}
+.toggle-slider::before{content:'';position:absolute;height:14px;width:14px;left:2px;top:2px;background:#fff;border-radius:50%;transition:0.25s;opacity:0.6}
+.toggle-switch input:checked+.toggle-slider{background:var(--accent-primary);border-color:transparent}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px);opacity:1}
+.filter-active-dot{width:6px;height:6px;border-radius:50%;background:#6ee7b7;display:inline-block;margin-left:4px;vertical-align:middle;flex-shrink:0}
+</style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+{% set active_page = 'ack' %}
+{% include '_sidebar.html' %}
+
+
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">✅</div>
+    <span class="logo-text">ACK Report</span>
+  </div>
+  <a class="nav-btn" href="/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Dashboard
+  </a>
+</header>
+
+<!-- STICKY TOOLBAR -->
+<div class="toolbar">
+
+  <!-- MOD -->
+  <div class="filter-pill-wrap">
+    <div class="filter-pill" id="pillMod" onclick="toggleDD('ddMod','pillMod')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span id="pillModTxt">Active Alarms</span>
+      <svg class="pill-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="dd-panel" id="ddMod">
+      <div class="dd-title">Alarm Mode</div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeActive" onclick="setMode('active')">Active</button>
+        <button class="mode-btn" id="modeHistory" onclick="setMode('history')">History</button>
+      </div>
+      <div id="dateGroup" style="display:none;flex-direction:column;gap:0.5rem">
+        <div class="form-group"><label>Start</label><input type="text" id="dateFrom" placeholder="Date..."></div>
+        <div class="form-group"><label>End</label><input type="text" id="dateTill" placeholder="Date..."></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUPS -->
+  <div class="filter-pill-wrap">
+    <div class="filter-pill" id="pillGroups" onclick="toggleDD('ddGroups','pillGroups')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span id="pillGroupsTxt">Host Groups</span>
+      <svg class="pill-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="dd-panel dd-panel-wide" id="ddGroups">
+      <div class="dd-title">Host Groups</div>
+      <div class="group-actions">
+        <button class="ga-btn" onclick="toggleAllGrp(true)">Select All</button>
+        <button class="ga-btn" onclick="toggleAllGrp(false)">Clear</button>
+        <span id="selInfo" class="sel-info"></span>
+      </div>
+      <input type="text" class="gs-input" id="grpSearch" placeholder="Search... (Shift to select a range)" oninput="filterGroups()">
+      <div class="group-list" id="grpList"><div style="color:var(--text-muted);font-size:0.82rem;padding:0.5rem;text-align:center">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- ESİKLER + SEVERİTY -->
+  <div class="filter-pill-wrap">
+    <div class="filter-pill" id="pillThr" onclick="toggleDD('ddThr','pillThr')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+      <span id="pillThrTxt">Thresholds: 30m / 60m</span><span id="pillThrDot" style="display:none" class="filter-active-dot"></span>
+      <svg class="pill-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="dd-panel" id="ddThr" style="min-width:300px">
+      <div class="dd-title">ACK Thresholds (min)</div>
+      <div class="two-col">
+        <div class="form-group"><label>Early</label><input type="number" id="threshold1" value="30" min="1" oninput="onThrChange()"></div>
+        <div class="form-group"><label>Late</label><input type="number" id="threshold2" value="60" min="1" oninput="onThrChange()"></div>
+      </div>
+
+      <div class="dd-title" style="margin-top:0.25rem">Severity Filter</div>
+      <div class="sev-grid" id="sevCheckboxes">
+        <label class="sev-check checked" id="sc5"><input type="checkbox" value="5" checked onchange="onSevChange(this)"><span class="sev-dot" style="background:#ff6b6b"></span>Disaster</label>
+        <label class="sev-check checked" id="sc4"><input type="checkbox" value="4" checked onchange="onSevChange(this)"><span class="sev-dot" style="background:#ff9b7a"></span>High</label>
+        <label class="sev-check checked" id="sc3"><input type="checkbox" value="3" checked onchange="onSevChange(this)"><span class="sev-dot" style="background:#ffc94d"></span>Average</label>
+        <label class="sev-check checked" id="sc2"><input type="checkbox" value="2" checked onchange="onSevChange(this)"><span class="sev-dot" style="background:#ffe566"></span>Warning</label>
+        <label class="sev-check checked" id="sc1"><input type="checkbox" value="1" checked onchange="onSevChange(this)"><span class="sev-dot" style="background:#7ec8f5"></span>Information</label>
+        <label class="sev-check checked" id="sc0"><input type="checkbox" value="0" checked onchange="onSevChange(this)"><span class="sev-dot" style="background:#aab8be"></span>Not Classified</label>
+      </div>
+      <button onclick="setAllSev(true)" style="font-size:0.72rem;padding:3px 10px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-muted);cursor:pointer;font-family:inherit;margin-top:-0.25rem">Select All</button>
+
+      <div class="dd-title" style="margin-top:0.25rem">Quick Filters</div>
+      <div class="toggle-group">
+        <div class="toggle-row">
+          <div class="toggle-row-label">
+            Hide alarms shorter than 10 min
+            <small>Hide alarms cleared in under 10 min</small>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hideShort" onchange="applyFilters()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-row-label">
+            Hide unacknowledged
+            <small>Show only acknowledged alarms</small>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hideNoAck" onchange="applyFilters()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEP + ACK FİLTRE -->
+  <div class="toolbar-sep" id="sep1" style="display:none"></div>
+  <div class="ack-filters" id="ackFilters" style="display:none">
+    <button class="ack-btn active" data-f="all" onclick="setAckFilter('all')">All</button>
+    <button class="ack-btn" data-f="noack" onclick="setAckFilter('noack')">Not Acknowledged</button>
+    <button class="ack-btn" data-f="ok" id="btnOk" onclick="setAckFilter('ok')">Within 30m</button>
+    <button class="ack-btn" data-f="late30" id="btnLate30" onclick="setAckFilter('late30')">30-60m</button>
+    <button class="ack-btn" data-f="late60" id="btnLate60" onclick="setAckFilter('late60')">60m+</button>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions-right">
+    <button class="btn btn-success" id="exportBtn" onclick="exportExcel()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Excel
+    </button>
+    <button class="btn btn-primary" id="fetchBtn" onclick="fetchData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      Fetch Data
+    </button>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div class="dd-overlay" id="ddOverlay" onclick="closeAllDD()"></div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <div class="stats" id="statsRow" style="display:none">
+    <div class="stat-card s-total" onclick="setAckFilter('all')"><div class="stat-label">Total</div><div class="stat-value" id="stTotal">0</div></div>
+    <div class="stat-card s-noack" onclick="setAckFilter('noack')"><div class="stat-label">Not Acknowledged</div><div class="stat-value" id="stNoack">0</div></div>
+    <div class="stat-card s-ok" onclick="setAckFilter('ok')"><div class="stat-label" id="lblOk">Within 30m</div><div class="stat-value" id="stOk">0</div></div>
+    <div class="stat-card s-late30" onclick="setAckFilter('late30')"><div class="stat-label" id="lblLate30">30-60m</div><div class="stat-value" id="stLate30">0</div></div>
+    <div class="stat-card s-late60" onclick="setAckFilter('late60')"><div class="stat-label" id="lblLate60">60m+</div><div class="stat-value" id="stLate60">0</div></div>
+  </div>
+
+  <div class="table-toolbar" id="tblToolbar" style="display:none">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="tableSearch" placeholder="Search alarm, host or acknowledger..." oninput="applyFilters()">
+    </div>
+    <span class="result-info">Showing: <span id="shownCount">0</span> / <span id="totalCount">0</span></span>
+  </div>
+
+  <div class="table-card" id="tableCard" style="display:none">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Alarm Time</th>
+            <th>Sev</th>
+            <th>Host</th>
+            <th>Alarm Name</th>
+            <th>On-call Person</th>
+            <th>ACK</th>
+            <th>Time to First ACK</th>
+            <th>Time to Clear</th>
+            <th>ACK Details</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="emptyState" class="empty-state">
+    <div style="font-size:3rem;margin-bottom:1rem;opacity:0.3">✅</div>
+    <p style="color:var(--text-secondary);margin-bottom:0.5rem;font-size:1rem">No data yet</p>
+    <p style="font-size:0.85rem">Set the filters, then click "Fetch Data".</p>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p id="loadingText">Fetching data...</p>
+    <div id="progressWrap" style="width:320px;margin:1rem auto 0;display:none">
+      <div style="background:var(--bg-tertiary);border-radius:8px;height:8px;overflow:hidden;border:1px solid var(--border-color)">
+        <div id="progressBar" style="height:100%;width:0%;background:var(--accent-gradient);border-radius:8px;transition:width 0.3s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.4rem">
+        <span id="progressStep" style="font-size:0.75rem;color:var(--text-muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <span id="progressPct" style="font-size:0.75rem;color:var(--accent-primary);font-weight:600"></span>
+      </div>
+    </div>
+    <button id="cancelBtn" class="btn" onclick="cancelAckJob()" style="margin-top:1rem;display:none;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)">Cancel</button>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const SEV_L={'0':'Not Classified','1':'Information','2':'Warning','3':'Average','4':'High','5':'Disaster'};
+const SEV_S={'0':'NC','1':'Info','2':'Warn','3':'Avg','4':'High','5':'Disaster'};
+let allData=[],allGroups=[],filtGroups=[],curMode='active',curAckFilter='all',lastIdx=-1,curFiltered=[];
+let selectedSeverities=new Set(['0','1','2','3','4','5']);
+let curAckJobId=null, ackPollTimer=null;
+
+flatpickr('#dateFrom',{enableTime:true,dateFormat:'Y-m-d H:i',time_24hr:true,defaultDate:new Date(Date.now()-7*86400000)});
+flatpickr('#dateTill',{enableTime:true,dateFormat:'Y-m-d H:i',time_24hr:true,defaultDate:new Date()});
+
+// Convert a date string to a Unix timestamp in local time (timezone-safe)
+function localDateToUnix(dateStr) {
+    // flatpickr formati: "2026-01-01 00:00"
+    const parts = dateStr.split(/[- :]/);
+    // new Date(year, monthIndex, day, hour, minute) → HER ZAMAN yerel saat
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]),
+                       parseInt(parts[3]||0), parseInt(parts[4]||0), 0);
+    return Math.floor(d.getTime() / 1000);
+}
+
+// ── DROPDOWN ──
+function toggleDD(id,pillId){
+  const dd=document.getElementById(id),ov=document.getElementById('ddOverlay');
+  const isOpen=dd.classList.contains('show');
+  closeAllDD();
+  if(!isOpen){dd.classList.add('show');ov.classList.add('show');document.getElementById(pillId).classList.add('open');}
+}
+function closeAllDD(){
+  document.querySelectorAll('.dd-panel').forEach(d=>d.classList.remove('show'));
+  document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('open'));
+  document.getElementById('ddOverlay').classList.remove('show');
+}
+
+// ── MODE ──
+function setMode(mode){
+  curMode=mode;
+  document.getElementById('modeActive').classList.toggle('active',mode==='active');
+  document.getElementById('modeHistory').classList.toggle('active',mode==='history');
+  const dg=document.getElementById('dateGroup');
+  dg.style.display=mode==='history'?'flex':'none';
+  document.getElementById('pillModTxt').textContent=mode==='active'?'Active Alarms':'Past Alarms';
+}
+
+// ── GROUPS ──
+// On page load: load host groups in the background + auto-fetch active alarms.
+// The loading overlay is shown while fetching.
+window.addEventListener('DOMContentLoaded',()=>{
+  loadGroups();
+  fetchData();   // default mode 'active' -> all active alarms are fetched automatically
+});
+async function loadGroups(){
+  try{
+    const r=await (await fetch('/api/ack/hostgroups',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).json();
+    if(!r.success) throw new Error(r.error);
+    allGroups=r.data; filtGroups=[...allGroups]; renderGrp();
+  }catch(e){document.getElementById('grpList').innerHTML='<div style="color:var(--text-muted);padding:0.5rem">Error: '+esc(e.message)+'</div>';}
+}
+function filterGroups(){
+  const q=document.getElementById('grpSearch').value.toLowerCase();
+  filtGroups=allGroups.filter(g=>g.name.toLowerCase().includes(q));
+  lastIdx=-1; renderGrp();
+}
+function renderGrp(){
+  const sel=new Set(getSelGrps());
+  document.getElementById('grpList').innerHTML=filtGroups.length
+    ?filtGroups.map((g,i)=>`<div class="gi${sel.has(g.groupid)?' sel':''}" data-i="${i}" onclick="handleGrpClick(event,${i})"><input type="checkbox" id="g_${g.groupid}" value="${g.groupid}"${sel.has(g.groupid)?' checked':''} onclick="event.stopPropagation()"><label class="gn" for="g_${g.groupid}" onclick="event.preventDefault()">${esc(g.name)}</label><span class="gc">${g.host_count}</span></div>`).join('')
+    :'<div style="color:var(--text-muted);font-size:0.82rem;padding:0.5rem;text-align:center">Not found</div>';
+  updSelInfo();
+}
+function handleGrpClick(e,idx){
+  const item=e.currentTarget,cb=item.querySelector('input');
+  if(e.shiftKey&&lastIdx!==-1&&lastIdx!==idx){
+    const s=Math.min(lastIdx,idx),en=Math.max(lastIdx,idx);
+    for(let i=s;i<=en;i++){const el=document.querySelector(`.gi[data-i="${i}"]`);if(el){el.querySelector('input').checked=true;el.classList.add('sel');}}
+  }else{cb.checked=!cb.checked;item.classList.toggle('sel',cb.checked);lastIdx=idx;}
+  updSelInfo();
+}
+function updSelInfo(){
+  const cnt=document.querySelectorAll('#grpList input:checked').length;
+  document.getElementById('selInfo').textContent=cnt?I18N.t('{0} selected',cnt):'';
+  document.getElementById('pillGroupsTxt').textContent=cnt?I18N.t('{0} Groups',cnt):'Host Groups';
+}
+function toggleAllGrp(s){document.querySelectorAll('#grpList input[type=checkbox]').forEach(c=>{c.checked=s;c.closest('.gi').classList.toggle('sel',s);}); updSelInfo();}
+function getSelGrps(){return Array.from(document.querySelectorAll('#grpList input[type=checkbox]:checked')).map(c=>c.value);}
+
+// ── THRESHOLD ──
+function onSevChange(cb){
+  const v=cb.value;
+  if(cb.checked) selectedSeverities.add(v); else selectedSeverities.delete(v);
+  document.getElementById('sc'+v).classList.toggle('checked',cb.checked);
+  updatePillDot(); applyFilters();
+}
+function setAllSev(v){
+  document.querySelectorAll('#sevCheckboxes input').forEach(cb=>{cb.checked=v;const sv=cb.value;v?selectedSeverities.add(sv):selectedSeverities.delete(sv);document.getElementById('sc'+sv).classList.toggle('checked',v);});
+  updatePillDot(); applyFilters();
+}
+function updatePillDot(){
+  const hideShort=document.getElementById('hideShort')?.checked;
+  const hideNoAck=document.getElementById('hideNoAck')?.checked;
+  const notAllSev=selectedSeverities.size<6;
+  document.getElementById('pillThrDot').style.display=(hideShort||hideNoAck||notAllSev)?'':'none';
+}
+function onThrChange(){
+  const t1=document.getElementById('threshold1').value||30;
+  const t2=document.getElementById('threshold2').value||60;
+  document.getElementById('pillThrTxt').textContent=I18N.t('Thresholds: {0}m / {1}m',t1,t2);
+  document.getElementById('btnOk').textContent=I18N.t('Within {0}m',t1);
+  document.getElementById('btnLate30').textContent=I18N.t('{0}-{1}m',t1,t2);
+  document.getElementById('btnLate60').textContent=I18N.t('{0}m+',t2);
+  document.getElementById('lblOk').textContent=I18N.t('Within {0}m',t1);
+  document.getElementById('lblLate30').textContent=I18N.t('{0}-{1}m',t1,t2);
+  document.getElementById('lblLate60').textContent=I18N.t('{0}m+',t2);
+  updateStats(); applyFilters();
+}
+
+// ── ACK FILTER ──
+function setAckFilter(f){
+  curAckFilter=f;
+  document.querySelectorAll('.ack-btn').forEach(b=>b.classList.toggle('active',b.dataset.f===f));
+  document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active-stat'));
+  const m={all:'s-total',noack:'s-noack',ok:'s-ok',late30:'s-late30',late60:'s-late60'};
+  document.querySelector('.'+m[f])?.classList.add('active-stat');
+  applyFilters();
+}
+
+// ── FETCH (background job + progress polling) ──
+async function fetchData(){
+  closeAllDD();
+  document.getElementById('fetchBtn').disabled=true;
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  document.getElementById('loadingText').textContent='Starting job...';
+  document.getElementById('progressWrap').style.display='block';
+  document.getElementById('cancelBtn').style.display='inline-flex';
+  document.getElementById('progressBar').style.width='0%';
+  document.getElementById('progressStep').textContent='';
+  document.getElementById('progressPct').textContent='0%';
+
+  try{
+    const body={mode:curMode,groupIds:getSelGrps()};
+    if(curMode==='history'){
+      const tf=document.getElementById('dateFrom').value,tt=document.getElementById('dateTill').value;
+      if(!tf||!tt){alert('Please select a date range!');hideLoading();return;}
+      body.timeFrom=localDateToUnix(tf);
+      body.timeTill=localDateToUnix(tt);
+    }
+    // 1. Job'i baslat
+    const startRes=await (await fetch('/api/ack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+    if(!startRes.success) throw new Error(startRes.error||'Could not start the job');
+    curAckJobId=startRes.jobId;
+
+    // 2. Progress polling
+    ackPollTimer=setInterval(async()=>{
+      try{
+        const pRes=await (await fetch('/api/ack/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId:curAckJobId})})).json();
+        if(!pRes.success) return;
+        const d=pRes.data;
+        document.getElementById('progressBar').style.width=d.percent+'%';
+        document.getElementById('progressStep').textContent=d.step||'';
+        document.getElementById('progressPct').textContent=d.percent+'%';
+        document.getElementById('loadingText').textContent=d.step||'Fetching data...';
+
+        if(pRes.status==='done'){
+          clearInterval(ackPollTimer); ackPollTimer=null;
+          // 3. Sonucu al
+          const rRes=await (await fetch('/api/ack/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId:curAckJobId})})).json();
+          if(!rRes.success) throw new Error(rRes.error||'Could not fetch the result');
+          allData=rRes.data;
+          ['sep1','ackFilters','statsRow','tblToolbar','tableCard','exportBtn'].forEach(id=>{const el=document.getElementById(id);if(el) el.style.display='';});
+          document.getElementById('emptyState').style.display='none';
+          onThrChange(); updateStats(); applyFilters();
+          showToast(I18N.t('{0} alarms loaded',rRes.total),'success');
+          hideLoading();
+        } else if(pRes.status==='error'){
+          clearInterval(ackPollTimer); ackPollTimer=null;
+          throw new Error(pRes.error||'Unknown error');
+        } else if(pRes.status==='cancelled'){
+          clearInterval(ackPollTimer); ackPollTimer=null;
+          showToast('Cancelled','error');
+          hideLoading();
+        }
+      }catch(pe){
+        clearInterval(ackPollTimer); ackPollTimer=null;
+        showToast('Error: '+pe.message,'error');
+        hideLoading();
+      }
+    },1000);
+
+  }catch(e){showToast('Error: '+e.message,'error');hideLoading();}
+}
+
+function hideLoading(){
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('fetchBtn').disabled=false;
+  document.getElementById('progressWrap').style.display='none';
+  document.getElementById('cancelBtn').style.display='none';
+  curAckJobId=null;
+}
+
+async function cancelAckJob(){
+  if(!curAckJobId) return;
+  try{
+    await fetch('/api/ack/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId:curAckJobId})});
+  }catch(e){}
+  if(ackPollTimer){clearInterval(ackPollTimer);ackPollTimer=null;}
+  showToast('Cancelling...','error');
+  hideLoading();
+}
+
+function getThr(){return{t1:(parseInt(document.getElementById('threshold1').value)||30)*60,t2:(parseInt(document.getElementById('threshold2').value)||60)*60};}
+function getAckCat(r){const{t1,t2}=getThr();if(r.ack_status==='noack')return'noack';if(r.ack_delay_sec<=t1)return'ok';if(r.ack_delay_sec<=t2)return'late30';return'late60';}
+function updateStats(){
+  const t={noack:0,ok:0,late30:0,late60:0};
+  allData.forEach(r=>t[getAckCat(r)]++);
+  document.getElementById('stTotal').textContent=allData.length;
+  document.getElementById('stNoack').textContent=t.noack;
+  document.getElementById('stOk').textContent=t.ok;
+  document.getElementById('stLate30').textContent=t.late30;
+  document.getElementById('stLate60').textContent=t.late60;
+}
+function applyFilters(){
+  const s=document.getElementById('tableSearch').value.toLowerCase();
+  const hideShort=document.getElementById('hideShort')?.checked;
+  const hideNoAck=document.getElementById('hideNoAck')?.checked;
+  const SHORT_THRESHOLD=10*60; // 10 minutes, in seconds
+  curFiltered=allData.filter(r=>{
+    // Metin arama
+    const ms=!s||(r.name||'').toLowerCase().includes(s)||(r.host||'').toLowerCase().includes(s)||(r.ack_username||'').toLowerCase().includes(s)||(r.nobetci||'').toLowerCase().includes(s);
+    if(!ms) return false;
+    // Severity multi-filter
+    if(selectedSeverities.size>0&&!selectedSeverities.has(String(r.severity))) return false;
+    // ACK filter
+    if(curAckFilter!=='all'&&getAckCat(r)!==curAckFilter) return false;
+    // Hide alarms shorter than 10 min: clear_sec < 600 and resolved (r_clock > 0)
+    if(hideShort&&r.clear_sec!=null&&r.clear_sec>=0&&r.clear_sec<SHORT_THRESHOLD) return false;
+    // hide those without an ACK
+    if(hideNoAck&&r.ack_status==='noack') return false;
+    return true;
+  });
+  document.getElementById('shownCount').textContent=curFiltered.length;
+  document.getElementById('totalCount').textContent=allData.length;
+  updatePillDot();
+  renderTable(curFiltered);
+}
+
+function fd(ts){return ts?new Date(ts*1000).toLocaleString(I18N.locale):'-'}
+function fDelay(sec){
+  if(sec==null||sec<0)return'-';
+  if(sec<60)return I18N.t('{0}s',sec);
+  if(sec<3600)return I18N.t('{0}m',Math.round(sec/60));
+  const h=Math.floor(sec/3600),m=Math.round((sec%3600)/60);
+  return m?I18N.t('{0}h {1}m',h,m):I18N.t('{0}h',h);
+}
+
+function renderTable(data){
+  if(!data.length){
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)">No alarms match the filters</td></tr>';
+    return;
+  }
+  document.getElementById('tableBody').innerHTML=data.map(r=>{
+    const cat=getAckCat(r);
+    const dc=cat==='ok'?'delay-ok':cat==='late30'?'delay-warn':cat==='late60'?'delay-late':'delay-none';
+    const badge=r.ack_status==='ack'
+      ?`<span class="ack-yes"><span class="dot dot-green"></span>ACK<span class="ack-count-badge">${r.ack_count}</span></span>`
+      :'<span class="ack-no"><span class="dot dot-red"></span>No ACK</span>';
+    const delay=r.ack_status==='ack'
+      ?`<span class="${dc}">${fDelay(r.ack_delay_sec)}</span><br><small style="color:var(--text-muted)">${fd(r.ack_clock)}</small>`
+      :'<span class="delay-none">-</span>';
+    const clearStr=r.clear_sec!=null&&r.clear_sec>=0
+      ?`<span class="clear-ok">${fDelay(r.clear_sec)}</span><br><small style="color:var(--text-muted)">${fd(r.r_clock)}</small>`
+      :'<span class="clear-none">-</span>';
+    const detail=r.all_acks&&r.all_acks.length
+      ?'<div class="ack-detail">'+r.all_acks.map((a,i)=>`<div class="ack-entry"><span class="ack-user">${esc(a.username)}${i===0?' <span style="font-size:0.65rem;color:#6ee7b7;font-weight:400">(first)</span>':''}</span><span class="ack-tline">${fd(a.clock)} · <span class="${i===0?dc:''}">${I18N.t('{0} later',fDelay(a.clock-r.clock))}</span></span>${a.message?'<div class="ack-msg">"'+esc(a.message)+'"</div>':''}</div>`).join('')+'</div>'
+      :'<span style="color:var(--text-muted);font-size:0.78rem">-</span>';
+    const nobetci=r.nobetci?esc(r.nobetci):'<span style="color:var(--text-muted)">-</span>';
+    return`<tr><td style="white-space:nowrap;color:var(--text-primary)">${fd(r.clock)}</td><td><span class="sev sev-${r.severity}">${SEV_S[r.severity]||'?'}</span></td><td style="color:var(--text-primary);font-weight:500;white-space:nowrap">${esc(r.host)}</td><td style="max-width:260px;word-break:break-word">${esc(r.name)}</td><td style="white-space:nowrap;color:var(--text-primary)">${nobetci}</td><td>${badge}</td><td>${delay}</td><td>${clearStr}</td><td style="min-width:200px;max-width:260px">${detail}</td></tr>`;
+  }).join('');
+}
+
+// ── EXCEL ──
+function exportExcel(){
+  if(!curFiltered.length){showToast('No data to download','error');return;}
+  const t1=parseInt(document.getElementById('threshold1').value)||30;
+  const t2=parseInt(document.getElementById('threshold2').value)||60;
+  const catLbl=c=>c==='noack'?I18N.t('Not Acknowledged'):c==='ok'?I18N.t('Within {0}m',t1):c==='late30'?I18N.t('{0}-{1}m',t1,t2):I18N.t('After {0}m',t2);
+
+  const rows=curFiltered.map(r=>{
+    const cat=getAckCat(r);
+    const ackDet=(r.all_acks||[]).map((a,i)=>`${i===0?I18N.t('[FIRST] '):''}${a.username} | ${fd(a.clock)} | ${I18N.t('{0} later',fDelay(a.clock-r.clock))}${a.message?' | "'+a.message+'"':''}`).join('\n');
+    const T=I18N.t;
+    return{
+      [T('Alarm Time')]:fd(r.clock),
+      [T('Severity')]:SEV_L[r.severity]||r.severity,
+      [T('Host')]:r.host||'',
+      [T('Alarm Name')]:r.name||'',
+      [T('On-call Person')]:r.nobetci||'-',
+      [T('ACK Status')]:r.ack_status==='ack'?T('Acknowledged'):T('Not Acknowledged'),
+      [T('ACK Category')]:catLbl(cat),
+      [T('ACK Count')]:r.ack_count||0,
+      [T('Time to First ACK')]:r.ack_status==='ack'?fDelay(r.ack_delay_sec):'-',
+      [T('First ACK Time')]:r.ack_status==='ack'?fd(r.ack_clock):'-',
+      [T('First ACK By')]:r.ack_username||'-',
+      [T('Time to Clear')]:r.clear_sec!=null&&r.clear_sec>=0?fDelay(r.clear_sec):'-',
+      [T('Clear Time')]:r.r_clock?fd(r.r_clock):'-',
+      [T('ACK Details')]:ackDet||'-'
+    };
+  });
+
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:20},{wch:14},{wch:22},{wch:45},{wch:16},{wch:16},{wch:8},{wch:16},{wch:20},{wch:20},{wch:14},{wch:20},{wch:50}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,I18N.t('ACK Report'));
+
+  // Ozet
+  const sum=[
+    [I18N.t('Total Alarms'),allData.length],
+    [I18N.t('Not Acknowledged'),allData.filter(r=>getAckCat(r)==='noack').length],
+    [I18N.t('Within {0}m',t1),allData.filter(r=>getAckCat(r)==='ok').length],
+    [I18N.t('{0}-{1}m',t1,t2),allData.filter(r=>getAckCat(r)==='late30').length],
+    [I18N.t('After {0}m',t2),allData.filter(r=>getAckCat(r)==='late60').length],
+    [I18N.t('Mode'),curMode==='active'?I18N.t('Active'):I18N.t('History')],
+    [I18N.t('Report Date'),new Date().toLocaleString(I18N.locale)],
+  ].map(([k,v])=>({[I18N.t('Metric')]:k,[I18N.t('Value')]:v}));
+  const ws2=XLSX.utils.json_to_sheet(sum);
+  ws2['!cols']=[{wch:22},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws2,I18N.t('Summary'));
+
+  XLSX.writeFile(wb,`ACK_Report_${curMode==='active'?'Active':'History'}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel downloaded','success');
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function showToast(msg,type){
+  const t=document.createElement('div');
+  t.className='toast '+(type||'info');
+  t.style.borderLeft='3px solid '+({success:'var(--success)',error:'var(--danger)'}[type]||'#3b82f6');
+  t.textContent=msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(),4000);
+}
+</script>
+</body>
+</html>

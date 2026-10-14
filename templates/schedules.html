@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/static/i18n.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scheduled Reports - Zabbix Report Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg-primary:#100e0a;--bg-secondary:#16140e;--bg-tertiary:#211d14;--bg-card:rgba(28,25,17,0.9);--text-primary:#fff;--text-secondary:#a59f91;--text-muted:#726c5e;--accent-primary:#f59e0b;--accent-secondary:#d97d06;--accent-gradient:linear-gradient(135deg,#f59e0b 0%,#d97d06 100%);--success:#10b981;--danger:#ef4444;--border-color:rgba(255,255,255,0.08);--border-radius:12px;--transition:0.15s ease}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',-apple-system,sans-serif;background:radial-gradient(ellipse at top,rgba(245,158,11,0.08) 0%,transparent 50%),var(--bg-primary);color:var(--text-primary);min-height:100vh;padding-left:248px}
+@media(max-width:860px){body{padding-left:0}#zrsSidebar{display:none !important}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg-secondary)}::-webkit-scrollbar-thumb{background:var(--bg-tertiary);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--accent-primary)}
+.wrap{max-width:1180px;margin:0 auto;padding:2rem}
+.page-head{display:flex;align-items:center;gap:.9rem;margin-bottom:.4rem}
+.page-head .ic{width:44px;height:44px;border-radius:12px;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center}
+.page-head h1{font-size:1.5rem;font-weight:700;flex:1}
+.sub{color:var(--text-secondary);font-size:.9rem;margin-bottom:1.6rem;line-height:1.5}
+.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:1.4rem 1.5rem;margin-bottom:1.4rem}
+.card h2{font-size:1rem;font-weight:600;margin-bottom:.3rem}
+.card .hint{color:var(--text-muted);font-size:.8rem;margin-bottom:1.1rem;line-height:1.5}
+.grid{display:flex;gap:1.1rem;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:.4rem;flex:1;min-width:150px}
+.fld.narrow{flex:0 0 130px;min-width:130px}
+.fld label,.lbl{font-size:.78rem;color:var(--text-secondary);font-weight:500}
+input[type=text],input[type=password],input[type=number],select{background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:.9rem;padding:.55rem .7rem;transition:var(--transition);width:100%}
+select option{background:#211d14;color:#fff}
+input:focus,select:focus{outline:none;border-color:var(--accent-primary)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:.4rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:600;padding:.5rem .6rem;border-bottom:1px solid var(--border-color);white-space:nowrap}
+td{padding:.7rem .6rem;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top;font-size:.86rem;color:var(--text-secondary)}
+td b{color:var(--text-primary);font-weight:600}
+td .small{font-size:.76rem;color:var(--text-muted);margin-top:.2rem;line-height:1.45}
+td.actions-cell{white-space:nowrap;text-align:right}
+.empty td{text-align:center;padding:2.4rem 1rem;color:var(--text-muted)}
+.pill{display:inline-block;font-size:.68rem;padding:.12rem .55rem;border-radius:20px;font-weight:600;margin-left:.4rem;vertical-align:middle}
+.pill.off{background:rgba(255,255,255,.07);color:var(--text-muted)}
+.st-ok{color:#6ee7b7}.st-err{color:#fca5a5}.st-run{color:#fbbf24}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.15rem;border:none;border-radius:11px;font-size:.87rem;font-weight:600;font-family:inherit;cursor:pointer;transition:var(--transition)}
+.btn-sm{padding:.38rem .75rem;font-size:.78rem;border-radius:9px;margin-left:.3rem}
+.btn-ghost{background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color)}
+.btn-ghost:hover:not(:disabled){color:var(--text-primary);border-color:var(--accent-primary)}
+.btn-danger:hover:not(:disabled){color:var(--danger);border-color:var(--danger)}
+.btn-primary{background:var(--accent-gradient);color:#fff;box-shadow:0 4px 15px rgba(245,158,11,.3)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.actions{display:flex;gap:.7rem;align-items:center;margin-top:1.3rem;flex-wrap:wrap}
+.note{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#fbbf24;border-radius:10px;padding:.75rem 1rem;font-size:.84rem;margin-bottom:1.4rem;line-height:1.5}
+.checks{display:flex;gap:.5rem 1.1rem;flex-wrap:wrap}
+.checks label,label.check{display:inline-flex;align-items:center;gap:.4rem;font-size:.84rem;color:var(--text-secondary);cursor:pointer}
+.checks input,label.check input{accent-color:var(--accent-primary);width:15px;height:15px}
+.groupbox{max-height:150px;overflow-y:auto;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;padding:.6rem .8rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.35rem .9rem}
+.groupbox .muted{color:var(--text-muted);font-size:.82rem;grid-column:1/-1}
+.modal{position:fixed;inset:0;background:rgba(6,5,3,.72);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;z-index:800;padding:4vh 20px;overflow-y:auto}
+.modal.show{display:flex}
+.dialog{width:100%;max-width:680px;background:#1b1810;border:1px solid rgba(240,230,200,.2);border-radius:18px;padding:1.6rem;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.dialog h3{font-size:1.1rem;font-weight:700;margin-bottom:1.1rem}
+.dialog .row{margin-bottom:1rem}
+.dialog .foot{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.4rem}
+.toast{position:fixed;bottom:24px;right:24px;padding:.9rem 1.3rem;border-radius:12px;font-weight:600;font-size:.88rem;z-index:900;box-shadow:0 8px 30px rgba(0,0,0,.5);transform:translateY(20px);opacity:0;transition:.25s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:#065f46;color:#d1fae5}.toast.err{background:#7f1d1d;color:#fee2e2}
+</style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+
+{% set active_page = 'schedules' %}
+{% include '_sidebar.html' %}
+
+<div class="wrap">
+  <div class="page-head">
+    <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></div>
+    <h1>Scheduled Reports</h1>
+    <button class="btn btn-primary" id="newBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New schedule</button>
+  </div>
+  <p class="sub">The alarm report is built automatically and e-mailed: a summary compared with the previous period, with the full alarm list attached as an Excel file. Reports are sent while the application is running.</p>
+
+  <div class="note" id="smtpNote" style="display:none"></div>
+
+  <div class="card">
+    <h2>Schedules</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Name</th><th>Server</th><th>When</th><th>Recipients</th><th>Next run</th><th>Last run</th><th></th></tr></thead>
+        <tbody id="schedBody"><tr class="empty"><td colspan="7">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if current_user.is_admin() %}
+  <div class="card">
+    <h2>E-mail (SMTP) settings</h2>
+    <p class="hint">The mail server used to send the reports. Shared by all users; the password is stored encrypted.</p>
+    <div class="grid">
+      <div class="fld"><label>SMTP host</label><input type="text" id="smHost" placeholder="smtp.example.com" autocomplete="off"></div>
+      <div class="fld narrow"><label>Port</label><input type="number" id="smPort" min="1" max="65535" value="587"></div>
+      <div class="fld narrow"><label>Security</label>
+        <select id="smSecurity"><option value="starttls">STARTTLS</option><option value="ssl">SSL/TLS</option><option value="none">None</option></select>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:1rem">
+      <div class="fld"><label>Username</label><input type="text" id="smUser" placeholder="(optional)" autocomplete="off"></div>
+      <div class="fld"><label>Password</label><input type="password" id="smPass" autocomplete="new-password"></div>
+      <div class="fld"><label>Sender address</label><input type="text" id="smFrom" placeholder="zabbix-reports@example.com" autocomplete="off"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="smSave">Save</button>
+      <span style="flex:1"></span>
+      <input type="text" id="smTestTo" placeholder="Test recipient" style="max-width:260px" autocomplete="off">
+      <button class="btn btn-ghost" id="smTest">Send test e-mail</button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="modal" id="modal">
+  <div class="dialog">
+    <h3 id="modalTitle">New schedule</h3>
+    <div class="grid row">
+      <div class="fld"><label>Name</label><input type="text" id="fName" placeholder="e.g. Weekly network report" autocomplete="off"></div>
+      <div class="fld"><label>Server</label><select id="fServer"></select></div>
+    </div>
+    <div class="grid row">
+      <div class="fld"><label>Frequency</label>
+        <select id="fFreq"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select>
+      </div>
+      <div class="fld" id="wdWrap"><label>Day of the week</label>
+        <select id="fWeekday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select>
+      </div>
+      <div class="fld" id="mdWrap"><label>Day of the month</label><select id="fMonthday"></select></div>
+      <div class="fld"><label>Time</label><select id="fHour"></select></div>
+    </div>
+    <div class="row"><span class="lbl" id="coverHint"></span></div>
+    <div class="row">
+      <div class="lbl" style="margin-bottom:.45rem">Host groups <span style="color:var(--text-muted)">(none selected = all host groups)</span></div>
+      <div class="groupbox" id="groupBox"><span class="muted">Loading...</span></div>
+    </div>
+    <div class="row">
+      <div class="lbl" style="margin-bottom:.45rem">Severities</div>
+      <div class="checks" id="sevBox">
+        <label><input type="checkbox" value="5"> <span>Disaster</span></label>
+        <label><input type="checkbox" value="4"> <span>High</span></label>
+        <label><input type="checkbox" value="3"> <span>Average</span></label>
+        <label><input type="checkbox" value="2"> <span>Warning</span></label>
+        <label><input type="checkbox" value="1"> <span>Information</span></label>
+        <label><input type="checkbox" value="0"> <span>Not Classified</span></label>
+      </div>
+    </div>
+    <div class="grid row">
+      <div class="fld" style="flex:3"><label>Recipients</label><input type="text" id="fRecipients" placeholder="one@example.com, two@example.com" autocomplete="off"></div>
+      <div class="fld narrow"><label>Report language</label>
+        <select id="fLang"><option value="en">English</option><option value="tr">Türkçe</option></select>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" id="fEnabled" checked> <span>Enabled</span></label>
+    <div class="foot">
+      <button class="btn btn-ghost" id="cancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const IS_ADMIN = {{ 'true' if current_user.is_admin() else 'false' }};
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DEFAULT_SEVERITIES = ['2', '3', '4', '5'];
+let SCHEDULES = [], SERVERS = [], ACTIVE_SERVER = null, editingId = null, pollTimer = null;
+const groupCache = {};      // serverId -> [{id, name}]
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+function esc(s){return String(s == null ? '' : s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function toast(msg,ok){const t=$('toast');t.textContent=msg;t.className='toast show '+(ok?'ok':'err');setTimeout(()=>t.className='toast',3200)}
+async function api(url, body){
+  const opt = body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)};
+  const r = await fetch(url, opt);
+  return r.json();
+}
+function fmtTs(ts){
+  return ts ? new Date(ts * 1000).toLocaleString(I18N.locale, {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '—';
+}
+function whenText(s){
+  const hh = pad(s.hour);
+  if (s.frequency === 'weekly') return I18N.t('Every {0} at {1}:00', I18N.t(WEEKDAYS[s.weekday]), hh);
+  if (s.frequency === 'monthly') return I18N.t('Day {0} of every month at {1}:00', s.monthday, hh);
+  return I18N.t('Every day at {0}:00', hh);
+}
+const COVERS = {daily:'Covers the previous day.', weekly:'Covers the previous 7 days.', monthly:'Covers the previous calendar month.'};
+
+function render(){
+  const tb = $('schedBody');
+  if (!SCHEDULES.length){
+    tb.innerHTML = '<tr class="empty"><td colspan="7">No scheduled reports yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = SCHEDULES.map(s => {
+    const st = s.lastStatus || '';
+    const cls = st === 'Running...' ? 'st-run' : st.startsWith('Error') ? 'st-err' : 'st-ok';
+    const groups = s.groupNames.length ? esc(s.groupNames.join(', ')) : I18N.t('All host groups');
+    return `<tr>
+      <td><b>${esc(s.name)}</b>${s.enabled ? '' : '<span class="pill off">Disabled</span>'}<div class="small">${groups}</div></td>
+      <td>${esc(s.serverName)}</td>
+      <td>${esc(whenText(s))}<div class="small">${I18N.t(COVERS[s.frequency])}</div></td>
+      <td>${esc(s.recipients).replace(/, /g, '<br>')}</td>
+      <td>${s.enabled ? fmtTs(s.nextRun) : '—'}</td>
+      <td>${fmtTs(s.lastRun)}<div class="small ${cls}">${esc(I18N.msg(st))}</div></td>
+      <td class="actions-cell">
+        <button class="btn btn-ghost btn-sm" onclick="runNow(${s.id})" ${st === 'Running...' ? 'disabled' : ''}>Send now</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEdit(${s.id})">Edit</button>
+        <button class="btn btn-ghost btn-danger btn-sm" onclick="del(${s.id})">Delete</button>
+      </td></tr>`;
+  }).join('');
+}
+
+async function load(){
+  const j = await api('/api/schedules');
+  if (!j.success){ toast(j.error || 'Could not load', false); return; }
+  SCHEDULES = j.schedules; SERVERS = j.servers; ACTIVE_SERVER = j.activeServerId;
+  const note = $('smtpNote');
+  note.style.display = j.smtpConfigured ? 'none' : 'block';
+  note.textContent = IS_ADMIN
+    ? 'E-mail is not set up yet: fill in the SMTP settings below before the first report can be sent.'
+    : 'E-mail is not set up yet: an admin has to enter the SMTP settings before reports can be sent.';
+  render();
+  clearTimeout(pollTimer);
+  if (SCHEDULES.some(s => s.lastStatus === 'Running...')) pollTimer = setTimeout(load, 3000);
+}
+
+// ── Form ──
+function fillSelects(){
+  $('fHour').innerHTML = Array.from({length:24}, (_, h) => `<option value="${h}">${pad(h)}:00</option>`).join('');
+  $('fMonthday').innerHTML = Array.from({length:31}, (_, d) => `<option value="${d + 1}">${d + 1}</option>`).join('');
+}
+function syncFreq(){
+  const f = $('fFreq').value;
+  $('wdWrap').style.display = f === 'weekly' ? '' : 'none';
+  $('mdWrap').style.display = f === 'monthly' ? '' : 'none';
+  $('coverHint').textContent = COVERS[f];
+}
+async function loadGroups(selected){
+  const box = $('groupBox'), sid = $('fServer').value;
+  const chosen = new Set((selected || []).map(String));
+  if (!sid){ box.innerHTML = '<span class="muted">Add a Zabbix server first.</span>'; return; }
+  if (!groupCache[sid]){
+    box.innerHTML = '<span class="muted">Loading...</span>';
+    const j = await api('/api/schedules/hostgroups', {serverId: Number(sid)});
+    if ($('fServer').value !== sid) return;          // another server was picked meanwhile
+    if (!j.success){ box.innerHTML = `<span class="muted">${esc(I18N.msg(j.error || 'Could not load'))}</span>`; return; }
+    groupCache[sid] = j.data;
+  }
+  box.innerHTML = groupCache[sid].map(g =>
+    `<label class="check"><input type="checkbox" value="${esc(g.id)}" data-name="${esc(g.name)}" ${chosen.has(String(g.id)) ? 'checked' : ''}> <span>${esc(g.name)}</span></label>`
+  ).join('') || '<span class="muted">No host groups found.</span>';
+}
+function openForm(s){
+  editingId = s ? s.id : null;
+  $('modalTitle').textContent = s ? 'Edit schedule' : 'New schedule';
+  $('fServer').innerHTML = SERVERS.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  $('fName').value = s ? s.name : '';
+  const sid = s ? s.serverId : (ACTIVE_SERVER || (SERVERS[0] && SERVERS[0].id));
+  if (sid) $('fServer').value = String(sid);
+  $('fFreq').value = s ? s.frequency : 'weekly';
+  $('fWeekday').value = String(s ? s.weekday : 0);
+  $('fMonthday').value = String(s ? s.monthday : 1);
+  $('fHour').value = String(s ? s.hour : 8);
+  $('fRecipients').value = s ? s.recipients : '';
+  $('fLang').value = s ? s.lang : I18N.lang;
+  $('fEnabled').checked = s ? s.enabled : true;
+  const sev = new Set(s ? s.severities : DEFAULT_SEVERITIES);
+  document.querySelectorAll('#sevBox input').forEach(i => { i.checked = sev.has(i.value); });
+  syncFreq();
+  loadGroups(s ? s.groupIds : []);
+  $('modal').classList.add('show');
+  $('fName').focus();
+}
+function openEdit(id){ const s = SCHEDULES.find(x => x.id === id); if (s) openForm(s); }
+function closeForm(){ $('modal').classList.remove('show'); }
+
+async function save(){
+  const payload = {
+    name: $('fName').value.trim(), serverId: Number($('fServer').value),
+    frequency: $('fFreq').value, weekday: Number($('fWeekday').value),
+    monthday: Number($('fMonthday').value), hour: Number($('fHour').value),
+    groups: [...document.querySelectorAll('#groupBox input:checked')].map(i => ({id: i.value, name: i.dataset.name})),
+    severities: [...document.querySelectorAll('#sevBox input:checked')].map(i => i.value),
+    recipients: $('fRecipients').value, lang: $('fLang').value, enabled: $('fEnabled').checked
+  };
+  if (!payload.name){ toast('A name is required.', false); return; }
+  if (!payload.serverId){ toast('Add a Zabbix server first.', false); return; }
+  $('saveBtn').disabled = true;
+  try{
+    const j = await api(editingId ? `/api/schedules/${editingId}` : '/api/schedules', payload);
+    if (j.success){ closeForm(); toast(editingId ? 'Schedule updated' : 'Schedule created', true); await load(); }
+    else toast(j.error || 'Could not save', false);
+  } catch(e){ toast('Could not save', false); }
+  finally{ $('saveBtn').disabled = false; }
+}
+async function del(id){
+  const s = SCHEDULES.find(x => x.id === id);
+  if (!confirm(I18N.t('Delete the schedule "{0}"?', s ? s.name : ''))) return;
+  const j = await api(`/api/schedules/${id}/delete`, {});
+  if (j.success){ toast('Schedule deleted', true); load(); } else toast(j.error || 'Could not delete', false);
+}
+async function runNow(id){
+  const j = await api(`/api/schedules/${id}/run`, {});
+  if (j.success){ toast('The report is being prepared and will be e-mailed.', true); load(); }
+  else toast(j.error || 'Operation failed', false);
+}
+
+// ── SMTP (admin) ──
+async function loadSmtp(){
+  const j = await api('/api/smtp');
+  if (!j.success) return;
+  const c = j.config;
+  $('smHost').value = c.host; $('smPort').value = c.port; $('smSecurity').value = c.security;
+  $('smUser').value = c.username; $('smFrom').value = c.fromAddr;
+  $('smPass').placeholder = c.hasPassword ? '(enter a new password to change it)' : '';
+}
+async function saveSmtp(){
+  const j = await api('/api/smtp', {
+    host: $('smHost').value.trim(), port: Number($('smPort').value), security: $('smSecurity').value,
+    username: $('smUser').value.trim(), password: $('smPass').value, fromAddr: $('smFrom').value.trim()
+  });
+  if (j.success){ $('smPass').value = ''; toast('SMTP settings saved', true); loadSmtp(); load(); }
+  else toast(j.error || 'Could not save', false);
+}
+async function testSmtp(){
+  const to = $('smTestTo').value.trim();
+  if (!to){ toast('Enter a test recipient.', false); return; }
+  $('smTest').disabled = true;
+  try{
+    const j = await api('/api/smtp/test', {to, lang: I18N.lang});
+    if (j.success) toast('Test e-mail sent', true);
+    else toast(I18N.t('Could not send:') + ' ' + I18N.msg(j.error || ''), false);
+  } catch(e){ toast('Operation failed', false); }
+  finally{ $('smTest').disabled = false; }
+}
+
+fillSelects();
+$('newBtn').onclick = () => openForm(null);
+$('cancelBtn').onclick = closeForm;
+$('saveBtn').onclick = save;
+$('fFreq').onchange = syncFreq;
+$('fServer').onchange = () => loadGroups([]);
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeForm(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeForm(); });
+if (IS_ADMIN){ $('smSave').onclick = saveSmtp; $('smTest').onclick = testSmtp; loadSmtp(); }
+load();
+</script>
+</body>
+</html>

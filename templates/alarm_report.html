@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="/static/i18n.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarm Report</title>
+    <link rel="stylesheet" href="/static/alarm/styles.css">
+    <link rel="stylesheet" href="/static/alarm/report-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+
+<body>
+{% set active_page = 'alarm_report' %}
+{% include '_sidebar.html' %}
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <span id="loadingText">Loading...</span>
+            <div id="progressContainer" class="progress-container" style="display:none;">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+                </div>
+                <span class="progress-text" id="progressText">0%</span>
+                <span class="progress-detail" id="progressDetail"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                <span>Alarm Report</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="header-url" id="reportConnectedUrl"></span>
+            <a href="/" class="btn-back-dashboard" id="backToDashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <span>Back to Dashboard</span>
+                <svg class="btn-back-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    width="14" height="14">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <button class="btn btn-primary" id="exportReportBtn" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Export to Excel
+            </button>
+            <button class="btn btn-primary" id="exportPdfBtn" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                Create PDF
+            </button>
+            <button class="btn btn-outline btn-small" id="reportLogoutBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Sign out
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="report-main">
+        <!-- Filter Section -->
+        <section class="report-filters-panel">
+            <h2 class="filters-title" id="filtersToggle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+                Report Filters
+                <svg class="filters-chevron" id="filtersChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" width="20" height="20">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg>
+            </h2>
+            <div class="filters-body" id="filtersBody">
+
+                <div class="filters-grid">
+                    <!-- Date Range -->
+                    <div class="filter-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"
+                                height="18">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            Date Range
+                        </h3>
+                        <div class="filter-row">
+                            <div class="date-input-group">
+                                <label for="reportStartDate">Start</label>
+                                <input type="text" id="reportStartDate" placeholder="Select a date...">
+                            </div>
+                            <span class="date-separator">→</span>
+                            <div class="date-input-group">
+                                <label for="reportEndDate">End</label>
+                                <input type="text" id="reportEndDate" placeholder="Select a date...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Host Groups -->
+                    <div class="filter-card filter-card-hostgroups">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"
+                                height="18">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            Host Groups
+                            <span class="selected-count" id="selectedGroupCount">0 selected</span>
+                        </h3>
+                        <div class="host-group-actions" style="display:flex;gap:0.4rem;margin-bottom:0.5rem;flex-wrap:wrap">
+                            <button id="rptSelectAllBtn" onclick="rptSelectAll()" style="padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;font-family:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--border-color);background:rgba(245,158,11,0.1);color:#fbbf24;transition:0.15s ease" title="Select / deselect all groups">Select All</button>
+                            <button id="rptSelectVisibleBtn" onclick="rptSelectVisible()" style="padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;font-family:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--border-color);background:rgba(245,158,11,0.1);color:#fbbf24;transition:0.15s ease" title="Select the groups in the search results">Select Visible</button>
+                            <button onclick="rptClearSel()" style="padding:0.3rem 0.75rem;font-size:0.75rem;font-weight:600;font-family:inherit;cursor:pointer;border-radius:8px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);color:#fca5a5;transition:0.15s ease" title="Clear selection">Clear</button>
+                        </div>
+                        <div class="host-search-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="text" id="reportHostSearch" placeholder="Search... (Shift to select a range)">
+                        </div>
+                        <div class="report-host-groups" id="reportHostGroups">
+                            <div class="empty-state">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Severity Filter -->
+                    <div class="filter-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"
+                                height="18">
+                                <polygon
+                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                            Severity Filter
+                        </h3>
+                        <div class="severity-filter-list" id="reportSeverityFilter">
+                            <label class="severity-check disaster">
+                                <input type="checkbox" value="5" checked> <span>Disaster</span>
+                            </label>
+                            <label class="severity-check high">
+                                <input type="checkbox" value="4" checked> <span>High</span>
+                            </label>
+                            <label class="severity-check average">
+                                <input type="checkbox" value="3" checked> <span>Average</span>
+                            </label>
+                            <label class="severity-check warning">
+                                <input type="checkbox" value="2" checked> <span>Warning</span>
+                            </label>
+                            <label class="severity-check info">
+                                <input type="checkbox" value="1"> <span>Information</span>
+                            </label>
+                            <label class="severity-check notclassified">
+                                <input type="checkbox" value="0"> <span>Not Classified</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sla-option">
+                    <label class="sla-checkbox-label">
+                        <input type="checkbox" id="includeSlaReport">
+                        <span>Include SLA Availability Report</span>
+                    </label>
+                    <span class="sla-note">⚠ Enabling this may make the report take longer</span>
+                </div>
+
+                <div class="generate-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-generate" id="generateReportBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        Generate Report
+                    </button>
+                    <button class="btn btn-outline btn-small" id="clearCacheBtn" title="Clear the cache" style="font-size:12px;padding:6px 14px;border-color:#ef4444;color:#ef4444;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Clear Cache
+                    </button>
+                    <span id="cacheInfoText" style="font-size:12px;color:#888;margin-left:8px;"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Report Content (hidden until generated) -->
+        <div id="reportContent" class="report-content hidden">
+            <!-- General Statistics -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                        <path d="M22 12A10 10 0 0 0 12 2v10z" />
+                    </svg>
+                    General Statistics
+                </h2>
+                <div class="stats-grid" id="generalStats"></div>
+            </section>
+
+            <!-- Previous Period Comparison -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <polyline points="17 1 21 5 17 9" />
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                        <polyline points="7 23 3 19 7 15" />
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                    </svg>
+                    Previous Period Comparison
+                    <button class="btn btn-outline btn-small" id="compareBtn" style="margin-left:auto">Compare with previous period</button>
+                </h2>
+                <div id="compareBody"></div>
+            </section>
+
+            <!-- Severity Distribution -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    Distribution by Severity
+                </h2>
+                <div class="distribution-container">
+                    <div class="table-wrapper">
+                        <table class="report-table severity-table" id="severityTable">
+                            <thead>
+                                <tr>
+                                    <th>Severity</th>
+                                    <th>Alarm Count</th>
+                                    <th>Share (%)</th>
+                                    <th>Host Count</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="severityChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mesai Distribution -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Distribution by Business Hours
+                </h2>
+                <p class="section-note" id="hoursNote"></p>
+                <div class="distribution-container">
+                    <div class="table-wrapper">
+                        <table class="report-table mesai-table" id="mesaiTable">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Alarm Count</th>
+                                    <th>Share (%)</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="mesaiChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Host-Problem Combinations -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                    Host-Problem Combinations (TOP 10)
+                    <button class="btn-excluded-toggle" id="showExcludedBtn" style="display:none;"
+                        title="Show Excluded">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        Excluded (<span id="excludedCount">0</span>)
+                    </button>
+                </h2>
+                <div class="distribution-container" id="hostProblemDistribution">
+                    <div class="table-wrapper">
+                        <table class="report-table hostproblem-table" id="hostProblemTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Host</th>
+                                    <th>Problem</th>
+                                    <th>Occurrences</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="chart-wrapper" id="hostProblemChartWrapper">
+                        <button class="chart-expand-btn" id="chartExpandBtn" title="Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16" class="icon-expand">
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="21" y1="3" x2="14" y2="10" />
+                                <polyline points="9 21 3 21 3 15" />
+                                <line x1="3" y1="21" x2="10" y2="14" />
+                            </svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16" class="icon-collapse" style="display:none;">
+                                <polyline points="4 14 10 14 10 20" />
+                                <line x1="14" y1="10" x2="21" y2="3" />
+                                <polyline points="20 10 14 10 14 4" />
+                                <line x1="10" y1="14" x2="3" y2="21" />
+                            </svg>
+                        </button>
+                        <canvas id="hostProblemChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top 10 Most Alarmed Devices -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" />
+                        <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                    Top Alarming Devices (TOP 10)
+                    <button class="btn-excluded-toggle" id="showExcludedDevicesBtn" style="display:none;"
+                        title="Show Excluded">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        Excluded (<span id="excludedDevicesCount">0</span>)
+                    </button>
+                </h2>
+                <div class="distribution-container" id="topDevicesDistribution">
+                    <div class="table-wrapper">
+                        <table class="report-table hostproblem-table" id="topDevicesTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Host</th>
+                                    <th>Alarm Count</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="chart-wrapper" id="topDevicesChartWrapper">
+                        <button class="chart-expand-btn" id="chartExpandDevicesBtn" title="Expand">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16" class="icon-expand">
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="21" y1="3" x2="14" y2="10" />
+                                <polyline points="9 21 3 21 3 15" />
+                                <line x1="3" y1="21" x2="10" y2="14" />
+                            </svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16" class="icon-collapse" style="display:none;">
+                                <polyline points="4 14 10 14 10 20" />
+                                <line x1="14" y1="10" x2="21" y2="3" />
+                                <polyline points="20 10 14 10 14 4" />
+                                <line x1="10" y1="14" x2="3" y2="21" />
+                            </svg>
+                        </button>
+                        <canvas id="topDevicesChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Excluded Devices Popup -->
+            <div id="excludedDevicesPopup" class="popup-overlay hidden">
+                <div class="popup-content">
+                    <div class="popup-header">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20"
+                                height="20">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                            Excluded Devices
+                        </h3>
+                        <button class="popup-close" id="closeExcludedDevicesPopup">&times;</button>
+                    </div>
+                    <p class="popup-desc">The devices below were removed from the TOP 10 list. To add one back, use the
+                        "Add Back" button.</p>
+                    <div class="popup-body" id="excludedDevicesList"></div>
+                    <div class="popup-footer">
+                        <button class="btn btn-outline btn-small" id="reAddAllDevicesBtn">Add All Back</button>
+                        <button class="btn btn-primary btn-small" id="closeExcludedDevicesPopupBottom">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Excluded Combinations Popup -->
+            <div id="excludedPopup" class="popup-overlay hidden">
+                <div class="popup-content">
+                    <div class="popup-header">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20"
+                                height="20">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                            Excluded Combinations
+                        </h3>
+                        <button class="popup-close" id="closeExcludedPopup">&times;</button>
+                    </div>
+                    <p class="popup-desc">The combinations below were removed from the TOP 10 list. To add one back, use the
+                        "Add Back" button.</p>
+                    <div class="popup-body" id="excludedList"></div>
+                    <div class="popup-footer">
+                        <button class="btn btn-outline btn-small" id="reAddAllBtn">Add All Back</button>
+                        <button class="btn btn-primary btn-small" id="closeExcludedPopupBottom">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLA Availability Report -->
+            <section class="report-section" id="slaSection" style="display:none;">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    SLA Availability Report
+                    <span class="alarm-count-badge" id="slaCount">0</span>
+                    <button class="btn btn-outline btn-small" id="hideZeroSli" style="margin-left:auto;">Hide 0% rows</button>
+                </h2>
+                <div class="table-wrapper">
+                    <table class="report-table sla-table" id="slaTable">
+                        <thead>
+                            <tr>
+                                <th>SLA Name</th>
+                                <th>SLO (%)</th>
+                                <th>SLI (%)</th>
+                                <th>Uptime</th>
+                                <th>Downtime</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="sla-empty-state hidden" id="slaEmptyState">
+                    <p>No SLA defined, or no data in the selected date range.</p>
+                </div>
+            </section>
+
+            <!-- Detailed Alarm List -->
+            <section class="report-section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    Detailed Alarm List
+                    <span class="alarm-count-badge" id="detailAlarmCount">0</span>
+                </h2>
+                <!-- Detail Table Filters -->
+                <div class="detail-filters" id="detailFilters">
+                    <div class="detail-filter-group">
+                        <button class="detail-filter-btn" id="filterSeverityBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                            </svg>
+                            Severity <span class="filter-count" id="filterSeverityCount"></span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
+                                height="12" class="chevron">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <div class="detail-filter-dropdown hidden" id="filterSeverityDropdown">
+                            <div class="dropdown-items" id="filterSeverityItems"></div>
+                        </div>
+                    </div>
+                    <div class="detail-filter-group">
+                        <button class="detail-filter-btn" id="filterHostBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                            </svg>
+                            Host <span class="filter-count" id="filterHostCount"></span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
+                                height="12" class="chevron">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <div class="detail-filter-dropdown hidden" id="filterHostDropdown">
+                            <div class="dropdown-search">
+                                <input type="text" placeholder="Search hosts..." id="filterHostSearch">
+                            </div>
+                            <div class="dropdown-items" id="filterHostItems"></div>
+                        </div>
+                    </div>
+                    <div class="detail-filter-group">
+                        <button class="detail-filter-btn" id="filterMesaiBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                            </svg>
+                            Hours <span class="filter-count" id="filterMesaiCount"></span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
+                                height="12" class="chevron">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <div class="detail-filter-dropdown hidden" id="filterMesaiDropdown">
+                            <div class="dropdown-items" id="filterMesaiItems"></div>
+                        </div>
+                    </div>
+                    <div class="detail-filter-group">
+                        <button class="detail-filter-btn" id="filterCategoryBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                            </svg>
+                            Category <span class="filter-count" id="filterCategoryCount"></span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12"
+                                height="12" class="chevron">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <div class="detail-filter-dropdown hidden" id="filterCategoryDropdown">
+                            <div class="dropdown-items" id="filterCategoryItems"></div>
+                        </div>
+                    </div>
+                    <div class="detail-filter-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                            height="14">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input type="text" placeholder="Search problems... (e.g. power, disk, agent)"
+                            id="problemSearchInput">
+                    </div>
+                    <div class="active-filters" id="activeFilters"></div>
+                    <button class="btn-clear-filters hidden" id="clearAllFilters">Clear All Filters</button>
+                </div>
+                <div class="table-wrapper detail-table-wrapper">
+                    <table class="report-table detail-table" id="detailTable">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Date / Time</th>
+                                <th>Host</th>
+                                <th>Problem</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Business Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/static/alarm/report.js"></script>
+</body>
+
+</html>

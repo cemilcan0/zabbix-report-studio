@@ -1,0 +1,10 @@
+flask>=3.0
+requests
+openpyxl
+urllib3
+flask-sqlalchemy
+flask-login
+python-dotenv
+pywebview
+waitress
+fpdf2

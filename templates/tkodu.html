@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="/static/i18n.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trigger Search — Zabbix Report Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary:#100e0a; --bg-secondary:#16140e; --bg-tertiary:#211d14;
+      --bg-card:rgba(28,25,17,0.85);
+      --text-primary:#fff; --text-secondary:#a59f91; --text-muted:#726c5e;
+      --accent-primary:#f59e0b; --accent-secondary:#d97d06;
+      --accent-gradient:linear-gradient(135deg,#f59e0b 0%,#d97d06 100%);
+      --success:#10b981; --danger:#ef4444; --warning:#f59e0b;
+      --border-color:rgba(255,255,255,0.08);
+      --border-radius:12px; --border-radius-lg:20px;
+      --shadow-lg:0 8px 40px rgba(0,0,0,0.5);
+      --transition:0.15s ease;
+    }
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'IBM Plex Sans',-apple-system,sans-serif;
+      background:radial-gradient(ellipse at top,rgba(245,158,11,0.08) 0%,transparent 50%),var(--bg-primary);
+      color:var(--text-primary); min-height:100vh;
+    }
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background:var(--bg-tertiary); border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:var(--accent-primary); }
+
+    /* HEADER */
+    .app-header {
+      background:rgba(18,18,26,0.9); backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border-color);
+      padding:0 2rem; height:64px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:100;
+    }
+    .logo { display:flex; align-items:center; gap:0.75rem; }
+    .logo-icon { width:38px; height:38px; background:var(--accent-gradient); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+    .logo-text { font-size:1.1rem; font-weight:700; background:var(--accent-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .nav-btn {
+      display:inline-flex; align-items:center; gap:0.4rem;
+      padding:0.5rem 1rem; background:transparent;
+      border:1px solid var(--border-color); border-radius:var(--border-radius);
+      color:var(--text-secondary); font-size:0.85rem; font-family:inherit;
+      cursor:pointer; text-decoration:none; transition:var(--transition);
+    }
+    .nav-btn:hover { background:var(--bg-tertiary); color:var(--text-primary); }
+    .btn {
+      display:inline-flex; align-items:center; gap:0.4rem;
+      padding:0.6rem 1.25rem; border:none; border-radius:var(--border-radius);
+      font-size:0.875rem; font-weight:600; font-family:inherit; cursor:pointer; transition:var(--transition);
+    }
+    .btn-primary { background:var(--accent-gradient); color:#fff; box-shadow:0 4px 15px rgba(245,158,11,0.3); }
+    .btn-primary:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 20px rgba(245,158,11,0.4); }
+    .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+
+    /* MAIN */
+    .main { max-width:1400px; margin:0 auto; padding:2rem; }
+    .page-title { font-size:1.5rem; font-weight:700; margin-bottom:0.4rem; background:var(--accent-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .page-sub { color:var(--text-muted); font-size:0.875rem; margin-bottom:2rem; }
+
+    /* STATS */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .stat-card {
+      background:var(--bg-card); border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg); padding:1.25rem 1.5rem;
+      transition:var(--transition);
+    }
+    .stat-card:hover { border-color:rgba(245,158,11,0.3); transform:translateY(-2px); }
+    .stat-label { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.4rem; }
+    .stat-value { font-size:1.75rem; font-weight:700; }
+    .stat-total .stat-value { background:var(--accent-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .stat-enabled .stat-value { color:#6ee7b7; }
+    .stat-disabled .stat-value { color:#fca5a5; }
+
+    /* TOOLBAR */
+    .toolbar {
+      background:var(--bg-card); border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg); padding:1rem 1.5rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      margin-bottom:1.5rem;
+    }
+    .search-wrap {
+      display:flex; align-items:center; gap:0.5rem;
+      padding:0.6rem 1rem; background:var(--bg-tertiary);
+      border:1px solid var(--border-color); border-radius:var(--border-radius);
+      flex:1; min-width:240px;
+    }
+    .search-wrap svg { width:15px; height:15px; color:var(--text-muted); flex-shrink:0; }
+    .search-wrap input { background:transparent; border:none; color:var(--text-primary); font-size:0.875rem; font-family:inherit; outline:none; width:100%; }
+    .search-wrap input::placeholder { color:var(--text-muted); }
+
+    .filter-select {
+      padding:0.6rem 1rem; background:var(--bg-tertiary);
+      border:1px solid var(--border-color); border-radius:var(--border-radius);
+      color:var(--text-primary); font-size:0.875rem; font-family:inherit; outline:none;
+      cursor:pointer;
+    }
+    .filter-select:focus { border-color:var(--accent-primary); }
+    .filter-select option { background:var(--bg-secondary); }
+
+    .result-info { font-size:0.82rem; color:var(--text-muted); margin-left:auto; }
+    .result-info span { color:var(--accent-primary); font-weight:600; }
+
+    /* TABLE */
+    .table-card {
+      background:var(--bg-card); border:1px solid var(--border-color);
+      border-radius:var(--border-radius-lg); overflow:hidden;
+    }
+    .table-wrapper { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; min-width:700px; }
+    thead { background:rgba(245,158,11,0.06); }
+    th { padding:0.9rem 1.25rem; text-align:left; font-size:0.72rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border-color); white-space:nowrap; cursor:pointer; user-select:none; }
+    th:hover { color:var(--text-primary); }
+    th .sort-icon { margin-left:4px; opacity:0.4; }
+    td { padding:0.875rem 1.25rem; font-size:0.875rem; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.04); }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,0.025); }
+
+    .badge-enabled { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.7rem; background:rgba(16,185,129,0.12); color:#6ee7b7; border:1px solid rgba(16,185,129,0.25); border-radius:20px; font-size:0.72rem; font-weight:700; }
+    .badge-disabled { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.7rem; background:rgba(239,68,68,0.12); color:#fca5a5; border:1px solid rgba(239,68,68,0.25); border-radius:20px; font-size:0.72rem; font-weight:700; }
+    .dot { width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    .dot-green { background:var(--success); }
+    .dot-red   { background:var(--danger); }
+
+    .priority-badge {
+      padding:0.15rem 0.55rem; border-radius:6px; font-size:0.7rem; font-weight:700;
+    }
+    .p-5 { background:rgba(255,56,56,0.15); color:#ff6b6b; }
+    .p-4 { background:rgba(255,107,53,0.15); color:#ff9b7a; }
+    .p-3 { background:rgba(255,167,38,0.15); color:#ffc94d; }
+    .p-2 { background:rgba(255,238,88,0.15); color:#ffe566; }
+    .p-1 { background:rgba(66,165,245,0.15); color:#7ec8f5; }
+    .p-0 { background:rgba(120,144,156,0.15); color:#aab8be; }
+
+    .host-list { display:flex; flex-wrap:wrap; gap:4px; }
+    .host-chip {
+      padding:0.2rem 0.6rem; border-radius:6px; font-size:0.72rem;
+      background:rgba(245,158,11,0.1); color:#fbbf24;
+      border:1px solid rgba(245,158,11,0.2);
+    }
+    .host-chip.disabled { background:rgba(107,114,128,0.1); color:var(--text-muted); border-color:rgba(107,114,128,0.2); }
+
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--text-muted); }
+    .empty-state .icon { font-size:3rem; margin-bottom:1rem; opacity:0.4; }
+
+    /* LOADING */
+    .loading-overlay { position:fixed; inset:0; background:rgba(10,10,15,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:1000; }
+    .loading-overlay.hidden { display:none; }
+    .loading-box { text-align:center; }
+    .spinner { width:48px; height:48px; border:3px solid var(--bg-tertiary); border-top-color:var(--accent-primary); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 1rem; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-box p { color:var(--text-secondary); font-size:0.9rem; }
+
+    /* TOAST */
+    .toast-container { position:fixed; bottom:2rem; right:2rem; display:flex; flex-direction:column; gap:0.75rem; z-index:1001; }
+    .toast { padding:0.875rem 1.25rem; background:var(--bg-card); backdrop-filter:blur(20px); border:1px solid var(--border-color); border-radius:var(--border-radius); box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:0.75rem; min-width:260px; font-size:0.85rem; animation:slideIn 0.3s ease; }
+    @keyframes slideIn { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
+    .toast.success { border-left:3px solid var(--success); }
+    .toast.error   { border-left:3px solid var(--danger); }
+    .toast.info    { border-left:3px solid #3b82f6; }
+
+    .hidden { display:none !important; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+{% set active_page = 'tkodu' %}
+{% include '_sidebar.html' %}
+
+
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">🏷️</div>
+    <span class="logo-text">Trigger Search</span>
+  </div>
+  <div style="display:flex;gap:0.75rem;align-items:center;">
+    <div class="search-wrap" style="flex:none;min-width:0;width:240px;padding:0.5rem 0.9rem;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+      </svg>
+      <input type="text" id="codeInput" placeholder="Text to search in trigger names (e.g. CPU)" autocomplete="off"
+             onkeydown="if(event.key==='Enter')fetchTkodu()">
+    </div>
+    <button class="btn btn-primary" id="fetchBtn" onclick="fetchTkodu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+      </svg>
+      Fetch Data
+    </button>
+    <a class="nav-btn" href="/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Dashboard
+    </a>
+  </div>
+</header>
+
+<div class="main">
+  <div class="page-title">Trigger Search</div>
+  <div class="page-sub">Every Zabbix trigger whose name contains the text you type — with status and host details.</div>
+
+  <!-- STATS -->
+  <div class="stats" id="statsRow" style="display:none;">
+    <div class="stat-card stat-total">
+      <div class="stat-label">Total Triggers</div>
+      <div class="stat-value" id="statTotal">0</div>
+    </div>
+    <div class="stat-card stat-enabled">
+      <div class="stat-label">Enabled</div>
+      <div class="stat-value" id="statEnabled">0</div>
+    </div>
+    <div class="stat-card stat-disabled">
+      <div class="stat-label">Disabled</div>
+      <div class="stat-value" id="statDisabled">0</div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Search trigger name or host..." oninput="applyFilters()">
+    </div>
+    <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option value="Enabled">Enabled</option>
+      <option value="Disabled">Disabled</option>
+    </select>
+    <select class="filter-select" id="priorityFilter" onchange="applyFilters()">
+      <option value="">All Priorities</option>
+      <option value="5">Disaster</option>
+      <option value="4">High</option>
+      <option value="3">Average</option>
+      <option value="2">Warning</option>
+      <option value="1">Information</option>
+      <option value="0">Not Classified</option>
+    </select>
+    <span class="result-info">Showing: <span id="shownCount">0</span> / <span id="totalCount">0</span></span>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card" id="tableCard" style="display:none;">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('description')">Trigger Name <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('status')">Status <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable('priority')">Priority <span class="sort-icon">↕</span></th>
+            <th>Host(s)</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EMPTY -->
+  <div id="emptyState" class="empty-state">
+    <div class="icon">📭</div>
+    <p style="color:var(--text-secondary);margin-bottom:0.5rem;">No data yet</p>
+    <p style="font-size:0.85rem;">Type the text to search in trigger names (e.g. CPU) and click "Fetch Data".</p>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p>Fetching triggers...</p>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const PRIORITY_NAMES = { '0':'NC', '1':'Info', '2':'Warning', '3':'Average', '4':'High', '5':'Disaster' };
+let allData = [];
+let sortKey = '';
+let sortAsc = true;
+
+async function fetchTkodu() {
+  const codeInput = document.getElementById('codeInput');
+  const code = codeInput.value.trim();
+  if (!code) { showToast('Please enter a code to search', 'error'); codeInput.focus(); return; }
+  document.getElementById('fetchBtn').disabled = true;
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  try {
+    const res = await fetch('/api/tkodu', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ code }) });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error);
+
+    allData = result.data;
+
+    // Stats
+    const enabled  = allData.filter(t => t.status === 'Enabled').length;
+    const disabled = allData.filter(t => t.status === 'Disabled').length;
+    document.getElementById('statTotal').textContent   = allData.length;
+    document.getElementById('statEnabled').textContent  = enabled;
+    document.getElementById('statDisabled').textContent = disabled;
+
+    document.getElementById('statsRow').style.display  = '';
+    document.getElementById('toolbar').style.display   = '';
+    document.getElementById('tableCard').style.display = '';
+    document.getElementById('emptyState').style.display = 'none';
+
+    applyFilters();
+    showToast(I18N.t('{0} triggers found', allData.length), 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('fetchBtn').disabled = false;
+  }
+}
+
+function applyFilters() {
+  const search   = document.getElementById('searchInput').value.toLowerCase();
+  const status   = document.getElementById('statusFilter').value;
+  const priority = document.getElementById('priorityFilter').value;
+
+  let filtered = allData.filter(t => {
+    const matchSearch = !search ||
+      t.description.toLowerCase().includes(search) ||
+      t.hosts.some(h => h.name.toLowerCase().includes(search));
+    const matchStatus   = !status   || t.status === status;
+    const matchPriority = !priority || t.priority === priority;
+    return matchSearch && matchStatus && matchPriority;
+  });
+
+  if (sortKey) {
+    filtered.sort((a, b) => {
+      let av = a[sortKey] || '', bv = b[sortKey] || '';
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  }
+
+  document.getElementById('shownCount').textContent = filtered.length;
+  document.getElementById('totalCount').textContent  = allData.length;
+  renderTable(filtered);
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortAsc = !sortAsc;
+  else { sortKey = key; sortAsc = true; }
+  applyFilters();
+}
+
+function renderTable(data) {
+  if (!data.length) {
+    document.getElementById('tableBody').innerHTML = `
+      <tr><td colspan="4" style="text-align:center;padding:3rem;color:var(--text-muted);">No triggers match the filters</td></tr>
+    `;
+    return;
+  }
+
+  document.getElementById('tableBody').innerHTML = data.map(t => {
+    const statusBadge = t.status === 'Enabled'
+      ? `<span class="badge-enabled"><span class="dot dot-green"></span>Enabled</span>`
+      : `<span class="badge-disabled"><span class="dot dot-red"></span>Disabled</span>`;
+
+    const priorityBadge = `<span class="priority-badge p-${t.priority}">${PRIORITY_NAMES[t.priority] || '?'}</span>`;
+
+    const hostChips = t.hosts.length
+      ? `<div class="host-list">${t.hosts.map(h =>
+          `<span class="host-chip ${h.status === 'Disabled' ? 'disabled' : ''}" title="${h.status}">${esc(h.name)}</span>`
+        ).join('')}</div>`
+      : `<span style="color:var(--text-muted);font-size:0.8rem;">—</span>`;
+
+    return `
+      <tr>
+        <td style="max-width:500px;word-break:break-word;color:var(--text-primary);font-weight:500;">${esc(t.description)}</td>
+        <td>${statusBadge}</td>
+        <td>${priorityBadge}</td>
+        <td>${hostChips}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function showToast(msg, type='info') {
+  const colors = { success:'var(--success)', error:'var(--danger)', info:'#3b82f6' };
+  const icons  = {
+    success:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    error:  '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    info:   '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+  };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${colors[type]}" stroke-width="2" width="18" height="18">${icons[type]}</svg>${esc(msg)}`;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
+</body>
+</html>

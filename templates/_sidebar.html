@@ -1,0 +1,47 @@
+{# Shared left menu — identical on every page. active_page highlights the current item. #}
+{% set active_page = active_page | default('') %}
+<style>
+  body{padding-left:248px !important}
+  @media(max-width:860px){body{padding-left:0 !important}#zrsSidebar{display:none !important}}
+  #zrsSidebar::-webkit-scrollbar{width:8px}
+  #zrsSidebar::-webkit-scrollbar-thumb{background:rgba(240,230,200,.16);border-radius:6px}
+</style>
+{% macro navlink(href, page, label, svg) -%}
+{% set on = (active_page == page) -%}
+<a href="{{ href }}" {% if on %}data-on=1{% endif %} style="display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:2px;border-radius:9px;font-size:13.5px;font-weight:500;text-decoration:none;transition:background .12s;{% if on %}background:rgba(245,158,11,.14);color:#fbbf24;box-shadow:inset 2px 0 0 #f59e0b;{% else %}color:#c7c0b0;{% endif %}" onmouseover="if(!this.getAttribute('data-on'))this.style.background='rgba(240,230,200,.05)'" onmouseout="if(!this.getAttribute('data-on'))this.style.background='transparent'">{{ svg|safe }}{{ label }}</a>
+{%- endmacro %}
+<aside id="zrsSidebar" style="position:fixed;left:0;top:0;width:248px;height:100vh;background:#14110b;border-right:1px solid rgba(240,230,200,.1);display:flex;flex-direction:column;z-index:500;font-family:'IBM Plex Sans',system-ui,sans-serif">
+  <div style="display:flex;align-items:center;gap:11px;padding:22px 22px 20px">
+    <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(150deg,#2a2410,#1f1b0c);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2.5-7 5 14 2.5-7H21"/></svg></div>
+    <div><div style="font-size:14px;font-weight:700;letter-spacing:-.01em;line-height:1.1;color:#f3efe6">Zabbix Report</div><div style="font-size:10.5px;color:#726c5e;letter-spacing:.05em;text-transform:uppercase;margin-top:2px">Studio</div></div>
+  </div>
+  <nav style="padding:6px 14px;flex:1;overflow-y:auto">
+    <div style="font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px">General</div>
+    {{ navlink('/', 'home', 'Overview', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>') }}
+    {{ navlink('/servers', 'servers', 'Zabbix Servers', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>') }}
+    <div style="font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px">Reports</div>
+    {{ navlink('/alarm/report', 'alarm_report', 'Alarm Report', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>') }}
+    {{ navlink('/ack', 'ack', 'ACK Report', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>') }}
+    {% if current_user.can_write() %}
+    {{ navlink('/schedules', 'schedules', 'Scheduled Reports', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>') }}
+    {% endif %}
+    <div style="font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px">On-call</div>
+    {{ navlink('/nobet', 'nobet', 'On-call Roster', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>') }}
+    <div style="font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px">Inventory</div>
+    {{ navlink('/tkodu', 'tkodu', 'Trigger Search', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>') }}
+    {{ navlink('/envanter', 'envanter', 'Inventory', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V3a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4"/></svg>') }}
+    {{ navlink('/alarm/cache', 'cache', 'Cache', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>') }}
+    {% if current_user.is_admin() %}
+    <div style="font-size:10px;font-weight:600;color:#6e685a;letter-spacing:.1em;text-transform:uppercase;padding:14px 10px 8px">Management</div>
+    {{ navlink('/users', 'users', 'Users', '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>') }}
+    {% endif %}
+  </nav>
+  <div style="padding:14px;border-top:1px solid rgba(240,230,200,.1)">
+    <div style="display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:10px;background:#1b1810;border:1px solid rgba(240,230,200,.1)">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(150deg,#f59e0b,#d97d06);display:flex;align-items:center;justify-content:center;color:#2a1e05;font-weight:700;font-size:13px;flex-shrink:0">{{ current_user.username[0] | upper }}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f3efe6">{{ current_user.username }}</div><div style="font-size:10.5px;color:#726c5e">{{ current_user.role | capitalize }}</div></div>
+      <a href="/change-password" title="Change password" style="color:#726c5e;padding:6px;border-radius:7px;display:flex;text-decoration:none" onmouseover="this.style.color='#fbbf24';this.style.background='rgba(245,158,11,.12)'" onmouseout="this.style.color='#726c5e';this.style.background='transparent'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2"/><path d="M17 6l3 3"/><path d="M14 9l2 2"/></svg></a>
+      <a href="/logout" title="Sign out" style="color:#726c5e;padding:6px;border-radius:7px;display:flex;text-decoration:none" onmouseover="this.style.color='#fb7a3c';this.style.background='rgba(251,122,60,.12)'" onmouseout="this.style.color='#726c5e';this.style.background='transparent'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
+    </div>
+  </div>
+</aside>
